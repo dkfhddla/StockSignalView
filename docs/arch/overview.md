@@ -20,7 +20,7 @@ Future Extension Services
  ├─ News
  ├─ Disclosures
  ├─ AI Views
- └─ Broker Adapter
+ └─ BrokerAdapter
 ```
 
 ## 계층별 책임
@@ -46,7 +46,7 @@ Future Extension Services
 - `News`: 후속 뉴스 수집과 저장 책임을 맡는다.
 - `Disclosures`: 후속 공시 수집과 분류 책임을 맡는다.
 - `AI Views`: 후속 자연어 요청을 View Schema로 변환하는 책임을 맡는다.
-- `Broker Adapter`: 후속 증권사 연동을 어댑터 경계 뒤에 둔다.
+- `BrokerAdapter`: 후속 증권사 연동을 어댑터 경계 뒤에 둔다.
 
 ### Database
 
