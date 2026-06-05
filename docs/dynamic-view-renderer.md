@@ -67,10 +67,9 @@ Dashboard Schema 수신
 ## 오류 상태
 
 - `INVALID_SCHEMA`: 스키마가 검증을 통과하지 못함.
-- `UNSUPPORTED_WIDGET`: 등록되지 않은 위젯 타입.
-- `DATA_UNAVAILABLE`: 필요한 데이터 없음.
-- `PARTIAL_DATA`: 일부 지표만 계산 가능.
-- `EMPTY_RESULT`: 필터 결과가 없음.
+- `UNAVAILABLE`: 필요한 핵심 데이터 없음.
+- `PARTIAL`: 일부 지표만 계산 가능.
+- `EMPTY`: 필터 결과가 없거나 표시할 데이터 없음.
 
 ## 검증 기대치
 
