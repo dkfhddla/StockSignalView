@@ -106,6 +106,7 @@
 
 - `docs/product-requirements/stock-signal-view.md`의 핵심 요구사항 REQ-SSV-001~REQ-SSV-005
 - `docs/specs/mvp-foundation.md`: 집계 계산, Dashboard Schema, 알림 항목의 상위 규칙
+- `docs/specs/frontend-user-flow.md`: 실제 프론트엔드 화면 진입점과 상태 전이
 - `docs/dashboard-schema-v1.md`: 기본 대시보드 JSON 계약
 - `docs/widget-registry.md`: 허용 위젯 계약
 - `backend/app/models/*`, `backend/app/schemas/*`: 거래/종목/산출값 계약의 실구현 소유

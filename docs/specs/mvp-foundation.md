@@ -132,7 +132,9 @@ PC는 표 중심 레이아웃, 모바일은 카드형 레이아웃을 우선 적
 - `docs/widget-registry.md`: 허용 위젯 계약
 - `docs/dynamic-view-renderer.md`: 렌더러 책임 및 금지 동작
 - `docs/ai-dashboard-planner.md`: AI 플래너 책임 및 출력 제한
+- `docs/specs/frontend-user-flow.md`: 프론트엔드 화면 흐름과 상태 전이
 - `docs/arch/overview.md`: 저장소 경로 책임(Backend/Frontend/워크플로우)
+- `docs/arch/backend-architecture-slices.md`: 백엔드 레이어와 서비스 분리 책임
 - `MAP.md`: 구현 경로 책임(Backend, Frontend, API, 테스트)
 
 본 문서는 데이터 필드 전체 스키마를 소유하지 않고, 구현 계약은 상기 경로의 소스 계약과 향후 스키마 정의 문서에서 관리한다.

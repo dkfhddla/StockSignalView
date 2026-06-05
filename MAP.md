@@ -37,7 +37,9 @@
 - `docs/dynamic-view-renderer.md`: 검증된 Dashboard Schema를 화면으로 렌더링하는 프론트엔드 책임과 금지 동작을 기록한다.
 - `docs/product-requirements/`: 제품 의도, 사용자 문제, 성공 기준을 기록한다.
 - `docs/specs/`: 구현 가능한 행동 요구사항과 완료 기준을 기록한다.
+- `docs/specs/frontend-user-flow.md`: 프론트엔드 화면 진입점, 상태 전이, 반응형 흐름을 기록한다.
 - `docs/arch/`: 시스템 구조, 계층 책임, 데이터 흐름, 운영 제약을 기록한다.
+- `docs/arch/backend-architecture-slices.md`: FastAPI 백엔드의 API, 서비스, 모델, 작업 경계를 기록한다.
 - `docs/adr/`: 되돌리기 어려운 기술 선택과 주요 설계 결정을 기록한다.
 - `docs/guidelines/`: 저장소 규칙, 문서 정책, 리뷰 체크리스트를 기록한다.
 - `docs/guidelines/pr-guidelines.md`: PR 준비, 설명, 리뷰 대응, merge-ready 기준을 기록한다.

@@ -108,3 +108,6 @@ Future Extension Services
 ## MVP와 후속 확장
 
 MVP는 종목 관리, 거래 기록, 포트폴리오 계산, 상대수익률 계산, Dashboard Schema v1, 기본 위젯 레지스트리, 동적 렌더러, 기본 알림에 집중한다. 뉴스, 공시, 실시간 시세, 브로커 연동은 같은 경계 안에서 후속 단계로 추가한다.
+
+구현 단계의 백엔드 레이어 책임 분리는 `docs/arch/backend-architecture-slices.md`
+를 따른다.
