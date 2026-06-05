@@ -183,6 +183,8 @@ KOSPI/KOSDAQ 같은 시장 지수의 특정 시점 입력값이다.
 필드 초안:
 
 - `stock_id`: 종목 식별자
+- `stock_name`: 종목명
+- `market`: 시장 구분
 - `held_quantity`: 보유 수량
 - `average_cost`: 평균 매수가
 - `market_value`: 평가금액
@@ -198,6 +200,7 @@ KOSPI/KOSDAQ 같은 시장 지수의 특정 시점 입력값이다.
 규칙:
 
 - `PortfolioPosition`은 저장 원장이 아니라 거래, 가격, 지수 입력에서 재계산되는 파생 결과로 본다.
+- 테이블/카드 위젯이 별도 종목 조인 없이 표시 가능하도록 종목명과 시장 구분을 포함할 수 있다.
 - 성능 문제 또는 화면 응답성을 위해 캐시할 수는 있지만, 원본 데이터의 소유자는 `Trade`, `PriceSnapshot`, `MarketIndexSnapshot`이다.
 - 계산 상태가 `PARTIAL` 또는 `UNAVAILABLE`이면 대시보드에는 누락된 입력을 사용자가 이해할 수 있게 표시해야 한다.
 

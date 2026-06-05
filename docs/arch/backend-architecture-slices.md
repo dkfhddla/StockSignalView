@@ -169,6 +169,7 @@ AI Dashboard Request
 - `POST /stocks`
 - `GET /stocks`
 - `PATCH /stocks/{stock_id}`
+- `DELETE /stocks/{stock_id}`
 
 주요 경로:
 
@@ -248,4 +249,3 @@ AI Dashboard Request
 - [ ] 프론트엔드가 기대하는 상태 값(`PARTIAL`, `UNAVAILABLE`, `TRIGGERED`)이
       백엔드 슬라이스에서 일관되게 생산된다.
 - [ ] 후속 확장(뉴스/공시/브로커)이 MVP 계산 경계를 깨지 않고 추가 가능하다.
-
