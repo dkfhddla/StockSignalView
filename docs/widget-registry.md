@@ -116,6 +116,11 @@ Widget Registry는 Dashboard Schema v1에서 사용할 수 있는 위젯 타입�
 - `alert_rules`
 - `alert_events`
 
+바인딩 규칙:
+
+- 이 위젯은 각 규칙의 최신 평가 상태를 함께 표시해야 하므로 `alert_rules`와 `alert_events`를 함께 바인딩해야 한다.
+- Dashboard Schema v1에서는 이 위젯이 `data_keys`를 사용해 두 데이터 묶음을 동시에 참조한다.
+
 옵션:
 
 - `status_filter`: `TRIGGERED`, `NOT_TRIGGERED`, `UNAVAILABLE`, `ALL` 중 하나.

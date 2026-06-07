@@ -81,9 +81,15 @@ AI는 화면 코드를 생성하지 않는다. AI는 사용자의 질문과 투�
 - `widget_id`: 대시보드 내부 고유 식별자.
 - `type`: 위젯 레지스트리에 등록된 타입.
 - `title`: 사용자 표시 제목.
-- `data_key`: `data_requirements`의 `key`와 연결되는 데이터 묶음.
 - `layout`: 반응형 배치 힌트.
 - `options`: 위젯별 표시 옵션.
+
+데이터 연결 필드:
+
+- `data_key`: 단일 데이터 묶음을 쓰는 위젯이 `data_requirements`의 `key` 하나와 연결할 때 사용한다.
+- `data_keys`: 여러 데이터 묶음을 함께 써야 하는 위젯이 `data_requirements`의 `key` 배열과 연결할 때 사용한다.
+- 위젯은 `data_key` 또는 `data_keys` 중 하나 이상을 가져야 한다.
+- 단일 데이터셋만 필요한 위젯은 `data_key`를 기본값으로 사용한다.
 
 ## 허용 데이터 타입
 
@@ -97,8 +103,11 @@ AI는 화면 코드를 생성하지 않는다. AI는 사용자의 질문과 투�
 
 - `schema_version`이 지원 버전이 아니면 거부한다.
 - `widgets[*].type`이 위젯 레지스트리에 없으면 거부한다.
-- `widgets[*].data_key`가 `data_requirements[*].key`에 없으면 거부한다.
+- `widgets[*]`는 `data_key` 또는 `data_keys` 중 하나 이상을 가져야 한다.
+- `widgets[*].data_key`가 있으면 그 값이 `data_requirements[*].key`에 있어야 한다.
+- `widgets[*].data_keys[*]`가 있으면 모든 값이 `data_requirements[*].key`에 있어야 한다.
 - `widgets[*].data_key`가 가리키는 `data_requirements[*].type`이 해당 위젯 타입의 허용 데이터 타입과 다르면 거부한다.
+- `widgets[*].data_keys[*]`가 가리키는 모든 `data_requirements[*].type`이 해당 위젯 타입의 허용 데이터 타입 안에 있어야 한다.
 - 위젯 옵션에 레지스트리가 허용하지 않은 필드가 있으면 거부한다.
 - 문자열은 화면 표시 목적의 평문으로 취급하며 HTML로 해석하지 않는다.
 - 외부 URL, 스크립트, 함수 본문, SQL, Python/JavaScript 코드 조각은 허용하지 않는다.

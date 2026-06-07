@@ -38,7 +38,8 @@ Dashboard Schema 수신
 
 ### Data Binder
 
-- `data_key`를 실제 API 응답 또는 캐시된 계산 결과와 연결한다.
+- `data_key` 또는 `data_keys`를 실제 API 응답 또는 캐시된 계산 결과와 연결한다.
+- 여러 데이터 묶음을 쓰는 위젯은 각 `data_keys[*]`를 병합하지 않고, 위젯이 구분 가능한 입력으로 전달한다.
 - 데이터가 없으면 위젯에 `EMPTY` 또는 `UNAVAILABLE` 상태를 전달한다.
 
 ### Layout Engine
