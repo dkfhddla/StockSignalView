@@ -38,6 +38,7 @@
 - `docs/product-requirements/`: 제품 의도, 사용자 문제, 성공 기준을 기록한다.
 - `docs/specs/`: 구현 가능한 행동 요구사항과 완료 기준을 기록한다.
 - `docs/specs/frontend-user-flow.md`: 프론트엔드 화면 진입점, 상태 전이, 반응형 흐름을 기록한다.
+- `docs/ui/`: Dashboard Schema 계약을 보조하는 화면 구조, 컴포넌트 기준, 디자인 시스템, 반응형 규칙을 기록한다.
 - `docs/arch/`: 시스템 구조, 계층 책임, 데이터 흐름, 운영 제약을 기록한다.
 - `docs/arch/backend-architecture-slices.md`: FastAPI 백엔드의 API, 서비스, 모델, 작업 경계를 기록한다.
 - `docs/adr/`: 되돌리기 어려운 기술 선택과 주요 설계 결정을 기록한다.
@@ -49,6 +50,7 @@
 - 제품의 이유와 범위는 `docs/product-requirements/`에 둔다.
 - AI 동적 대시보드 엔진의 핵심 계약은 `docs/` 루트의 `dashboard-schema-v1.md`, `widget-registry.md`, `ai-dashboard-planner.md`, `dynamic-view-renderer.md`에 둔다.
 - 사용자가 경험해야 하는 동작과 수용 기준은 `docs/specs/`에 둔다.
+- 화면 구성, 정보 위계, UI 컴포넌트, 반응형 보조 기준은 `docs/ui/`에 둔다.
 - 서비스 경계, 데이터 흐름, 외부 연동 위치는 `docs/arch/`에 둔다.
 - 기술 선택, 보안 기본값, 장기 유지보수에 영향을 주는 결정은 `docs/adr/`에 둔다.
 - 문서 운영 규칙과 리뷰 기준은 `docs/guidelines/`에 둔다.
