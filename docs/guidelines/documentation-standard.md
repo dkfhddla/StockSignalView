@@ -1,7 +1,7 @@
 # StockSignalView Documentation Standard
 
-**Status:** Adopted for this repository  
-**Applies to:** StockSignalView durable repository documentation  
+**Status:** Adopted for this repository
+**Applies to:** StockSignalView durable repository documentation
 **Goal:** Keep project knowledge easy to discover, low-rot, and clear for both humans and agents while the product is still documentation-first.
 
 ## 1) Why this standard exists
