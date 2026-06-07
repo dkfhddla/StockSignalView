@@ -98,6 +98,7 @@ AI는 화면 코드를 생성하지 않는다. AI는 사용자의 질문과 투�
 - `schema_version`이 지원 버전이 아니면 거부한다.
 - `widgets[*].type`이 위젯 레지스트리에 없으면 거부한다.
 - `widgets[*].data_key`가 `data_requirements[*].key`에 없으면 거부한다.
+- `widgets[*].data_key`가 가리키는 `data_requirements[*].type`이 해당 위젯 타입의 허용 데이터 타입과 다르면 거부한다.
 - 위젯 옵션에 레지스트리가 허용하지 않은 필드가 있으면 거부한다.
 - 문자열은 화면 표시 목적의 평문으로 취급하며 HTML로 해석하지 않는다.
 - 외부 URL, 스크립트, 함수 본문, SQL, Python/JavaScript 코드 조각은 허용하지 않는다.
