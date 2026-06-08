@@ -24,6 +24,7 @@ node_modules/
 dist/
 build/
 coverage/
+*.tsbuildinfo
 
 # OS/editor
 .DS_Store

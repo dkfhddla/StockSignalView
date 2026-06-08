@@ -57,6 +57,8 @@ StockSignalView는 거래 기록과 투자 메모, 시장 대비 상대성과 �
 - [위젯 레지스트리](docs/widget-registry.md)
 - [AI 대시보드 플래너](docs/ai-dashboard-planner.md)
 - [동적 뷰 렌더러](docs/dynamic-view-renderer.md)
+- [프론트엔드 사용자 흐름](docs/specs/frontend-user-flow.md)
+- [UI 문서 안내](docs/ui/README.md)
 - [아키텍처 개요](docs/arch/overview.md)
 - [ADR 0001: 초기 로컬 웹 아키텍처](docs/adr/0001-initial-local-web-architecture.md)
 
