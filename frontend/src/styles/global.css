@@ -251,6 +251,26 @@ td span {
   margin: 0;
 }
 
+.widget-placeholder {
+  margin-bottom: 16px;
+  padding: 16px;
+  border: 1px dashed #b8c2cc;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.widget-placeholder p {
+  margin: 0;
+  color: #56606d;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.widget-placeholder code {
+  color: #25313d;
+  font-weight: 800;
+}
+
 .holding-card {
   padding: 14px;
   border: 1px solid #d8dee6;

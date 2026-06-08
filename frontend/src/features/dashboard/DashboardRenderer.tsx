@@ -1,4 +1,10 @@
-import { DashboardSchema, DashboardWidget, validateDashboardSchema } from "./dashboardSchema";
+import {
+  DashboardSchema,
+  DashboardWidget,
+  isImplementedWidgetType,
+  validateDashboardSchema,
+  WidgetType,
+} from "./dashboardSchema";
 import { Holding } from "./mockPortfolio";
 import { PositionCards } from "./widgets/PositionCards";
 import { PositionSummary } from "./widgets/PositionSummary";
@@ -56,7 +62,7 @@ export function DashboardRenderer({
             </button>
           ))}
         </div>
-        <span className="data-note">마지막 갱신: 2026-06-08 00:00 · 수동/모의 데이터</span>
+        <span className="data-note">샘플 포지션 데이터 · 수동/모의 입력</span>
       </section>
 
       {schema.widgets.map((widget) => (
@@ -71,6 +77,10 @@ export function DashboardRenderer({
 }
 
 function WidgetRenderer({ widget, positions }: { widget: DashboardWidget; positions: Holding[] }) {
+  if (!isImplementedWidgetType(widget.type)) {
+    return <RegisteredWidgetPlaceholder title={widget.title} type={widget.type} />;
+  }
+
   switch (widget.type) {
     case "position_summary":
       return <PositionSummary options={widget.options} positions={positions} title={widget.title} />;
@@ -79,4 +89,16 @@ function WidgetRenderer({ widget, positions }: { widget: DashboardWidget; positi
     case "position_cards":
       return <PositionCards options={widget.options} positions={positions} title={widget.title} />;
   }
+}
+
+function RegisteredWidgetPlaceholder({ title, type }: { title: string; type: WidgetType }) {
+  return (
+    <section className="widget-placeholder" aria-label={title}>
+      <h2 className="widget-title">{title}</h2>
+      <p>
+        <code>{type}</code> 위젯은 Dashboard Schema v1에 등록되어 있지만 이 MVP 화면 조각에서는 아직 시각
+        렌더링을 제공하지 않습니다.
+      </p>
+    </section>
+  );
 }
