@@ -183,9 +183,12 @@ function hasRequiredDataKeys(
   dataRequirements: Map<string, DashboardDataType>,
   requiredTypes: DashboardDataType[],
 ) {
-  return requiredTypes.every((requiredType) => {
-    return dataKeys.some((dataKey) => dataRequirements.get(dataKey) === requiredType);
-  });
+  const boundTypes = dataKeys.map((dataKey) => dataRequirements.get(dataKey));
+  return (
+    dataKeys.length === requiredTypes.length &&
+    boundTypes.every((dataType): dataType is DashboardDataType => dataType !== undefined) &&
+    requiredTypes.every((requiredType) => boundTypes.includes(requiredType))
+  );
 }
 
 function areOptionsValid(widget: DashboardWidget) {
@@ -193,42 +196,54 @@ function areOptionsValid(widget: DashboardWidget) {
     case "position_summary":
       return (
         hasOnlyOptionKeys(widget.options, ["show_unavailable_count", "highlight_metric"]) &&
+        typeof widget.options.show_unavailable_count === "boolean" &&
         ["unrealized_profit_loss", "relative_return_rate"].includes(widget.options.highlight_metric)
       );
     case "position_table":
       return (
         hasOnlyOptionKeys(widget.options, ["columns", "sort", "limit"]) &&
+        hasOnlyOptionKeys(widget.options.sort, ["field", "direction"]) &&
         widget.options.columns.every((column) => positionTableColumns.includes(column)) &&
         positionTableColumns.includes(widget.options.sort.field) &&
         widget.options.columns.includes(widget.options.sort.field) &&
-        ["asc", "desc"].includes(widget.options.sort.direction)
+        ["asc", "desc"].includes(widget.options.sort.direction) &&
+        isOptionalPositiveNumber(widget.options.limit)
       );
     case "position_cards":
       return (
         hasOnlyOptionKeys(widget.options, ["primary_metric", "show_memo_badge", "filter_strength"]) &&
         ["unrealized_profit_loss", "relative_return_rate", "stock_return_rate"].includes(widget.options.primary_metric) &&
+        typeof widget.options.show_memo_badge === "boolean" &&
         ["STRONG", "WEAK", "ALL"].includes(widget.options.filter_strength)
       );
     case "relative_return_chart":
       return (
         hasOnlyOptionKeys(widget.options, ["chart_type", "limit", "baseline"]) &&
         ["bar", "ranked_bar"].includes(widget.options.chart_type) &&
-        (widget.options.baseline === undefined || widget.options.baseline === "market_return_rate")
+        (widget.options.baseline === undefined || widget.options.baseline === "market_return_rate") &&
+        isOptionalPositiveNumber(widget.options.limit)
       );
     case "decision_timeline":
       return (
         hasOnlyOptionKeys(widget.options, ["stock_id", "trade_types", "show_profit_context"]) &&
+        typeof widget.options.show_profit_context === "boolean" &&
+        (widget.options.stock_id === undefined || typeof widget.options.stock_id === "string") &&
         (widget.options.trade_types === undefined ||
           widget.options.trade_types.every((tradeType) => ["BUY", "SELL"].includes(tradeType)))
       );
     case "alert_status_list":
       return (
         hasOnlyOptionKeys(widget.options, ["status_filter", "group_by_stock"]) &&
-        ["TRIGGERED", "NOT_TRIGGERED", "UNAVAILABLE", "ALL"].includes(widget.options.status_filter)
+        ["TRIGGERED", "NOT_TRIGGERED", "UNAVAILABLE", "ALL"].includes(widget.options.status_filter) &&
+        typeof widget.options.group_by_stock === "boolean"
       );
   }
 }
 
 function hasOnlyOptionKeys(options: object, allowedKeys: string[]) {
   return Object.keys(options).every((key) => allowedKeys.includes(key));
+}
+
+function isOptionalPositiveNumber(value: number | undefined) {
+  return value === undefined || (Number.isFinite(value) && value > 0);
 }
