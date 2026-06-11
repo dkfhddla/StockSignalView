@@ -18,6 +18,19 @@
 - `backend/app/services/`
 - `backend/app/jobs/`
 
+## 현재 구현 상태
+
+첫 백엔드 슬라이스로 다음 경로가 구현되어 있다.
+
+- `backend/app/api/dashboards.py`: `GET /dashboards/default`와 명시적 검증 실패 응답
+- `backend/app/schemas/dashboard.py`: Dashboard Schema v1 구조 모델
+- `backend/app/services/dashboards.py`: `portfolio-overview` 기본 프리셋
+- `backend/app/services/schema_validation.py`: 위젯 데이터 바인딩 의미 검증
+- `backend/tests/`: 구조, 의미 검증, HTTP 성공·실패 경로
+
+나머지 API, 계산 서비스, 영속 모델, 작업 스케줄러는 이 문서의 경계를
+따르는 후속 구현 범위다.
+
 ## 비범위
 
 - 프론트엔드 렌더링 방식
@@ -245,7 +258,7 @@ AI Dashboard Request
 
 - [ ] 각 API 엔드포인트가 직접 계산 로직을 소유하지 않는다.
 - [ ] 거래 변경과 포트폴리오/성과 재계산 책임이 서비스 계층에 모인다.
-- [ ] Dashboard Schema 생성과 검증이 별도 서비스 책임으로 분리된다.
+- [x] 기본 Dashboard Schema 생성과 검증이 별도 서비스 책임으로 분리된다.
 - [ ] 프론트엔드가 기대하는 상태 값(`PARTIAL`, `UNAVAILABLE`, `TRIGGERED`)이
       백엔드 슬라이스에서 일관되게 생산된다.
 - [ ] 후속 확장(뉴스/공시/브로커)이 MVP 계산 경계를 깨지 않고 추가 가능하다.
