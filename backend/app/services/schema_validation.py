@@ -28,6 +28,11 @@ def validate_dashboard_schema(schema: DashboardSchema) -> DashboardSchema:
     data_types = {requirement.key: requirement.type for requirement in schema.data_requirements}
     errors: list[str] = []
 
+    if not schema.data_requirements:
+        errors.append("dashboard requires at least one data requirement")
+    if not schema.widgets:
+        errors.append("dashboard requires at least one widget")
+
     for widget in schema.widgets:
         if isinstance(widget, AlertStatusListWidget):
             _validate_alert_binding(widget, data_types, errors)

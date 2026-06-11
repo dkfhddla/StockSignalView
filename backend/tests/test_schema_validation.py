@@ -192,3 +192,18 @@ def test_validator_rejects_invalid_alert_bindings(
 
     with pytest.raises(DashboardSchemaValidationError, match=message):
         validate_dashboard_schema(schema)
+
+
+@pytest.mark.parametrize(
+    ("field", "message"),
+    [
+        ("data_requirements", "at least one data requirement"),
+        ("widgets", "at least one widget"),
+    ],
+)
+def test_validator_rejects_empty_rendering_contract(field: str, message: str) -> None:
+    payload = build_default_dashboard()
+    payload[field] = []
+
+    with pytest.raises(DashboardSchemaValidationError, match=message):
+        validate_dashboard_schema(_schema(payload))
