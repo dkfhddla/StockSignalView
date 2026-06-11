@@ -141,3 +141,62 @@ def test_dashboard_error_response_has_stable_envelope() -> None:
             "message": "The default dashboard schema failed validation.",
         }
     }
+
+
+@pytest.mark.parametrize(
+    "widget",
+    [
+        {
+            "widget_id": "relative-return-chart",
+            "type": "relative_return_chart",
+            "title": "상대수익률 차트",
+            "data_key": "positions",
+            "layout": {"desktop_span": 12, "mobile_order": 4},
+            "options": {
+                "chart_type": "ranked_bar",
+                "limit": 10,
+                "baseline": "market_return_rate",
+            },
+        },
+        {
+            "widget_id": "decision-timeline",
+            "type": "decision_timeline",
+            "title": "거래 판단 타임라인",
+            "data_key": "trades",
+            "layout": {"desktop_span": 12, "mobile_order": 5},
+            "options": {
+                "stock_id": "005930",
+                "trade_types": ["BUY", "SELL"],
+                "show_profit_context": True,
+            },
+        },
+        {
+            "widget_id": "alert-status-list",
+            "type": "alert_status_list",
+            "title": "알림 상태",
+            "data_keys": ["alert-rules", "alert-events"],
+            "layout": {"desktop_span": 12, "mobile_order": 6},
+            "options": {
+                "status_filter": "ALL",
+                "group_by_stock": True,
+            },
+        },
+    ],
+)
+def test_dashboard_schema_accepts_each_registered_widget_shape(
+    valid_dashboard_payload: dict,
+    widget: dict,
+) -> None:
+    payload = deepcopy(valid_dashboard_payload)
+    payload["data_requirements"].extend(
+        [
+            {"key": "trades", "type": "trades"},
+            {"key": "alert-rules", "type": "alert_rules"},
+            {"key": "alert-events", "type": "alert_events"},
+        ]
+    )
+    payload["widgets"] = [widget]
+
+    schema = DashboardSchema.model_validate(payload)
+
+    assert schema.widgets[0].type == widget["type"]
