@@ -9,6 +9,20 @@ export type WidgetType =
   | "alert_status_list";
 export type ImplementedWidgetType = "position_summary" | "position_table" | "position_cards";
 
+export type DashboardDataRequirement =
+  | {
+      key: string;
+      type: "portfolio_positions";
+      filters?: {
+        holding_status: "HELD_OR_WATCHLISTED";
+      };
+    }
+  | {
+      key: string;
+      type: Exclude<DashboardDataType, "portfolio_positions">;
+      filters?: never;
+    };
+
 export type DashboardSchema = {
   schema_version: "1.0";
   dashboard_id: string;
@@ -22,11 +36,7 @@ export type DashboardSchema = {
       mobile: number;
     };
   };
-  data_requirements: Array<{
-    key: string;
-    type: DashboardDataType;
-    filters?: Record<string, string>;
-  }>;
+  data_requirements: DashboardDataRequirement[];
   widgets: DashboardWidget[];
 };
 
@@ -150,6 +160,9 @@ const positionTableColumns: PositionTableColumn[] = [
 
 export function validateDashboardSchema(schema: DashboardSchema): RendererStatus {
   if (schema.schema_version !== "1.0") return "INVALID_SCHEMA";
+  if (schema.data_requirements.some((requirement) => !isDataRequirementValid(requirement))) {
+    return "INVALID_SCHEMA";
+  }
 
   const dataRequirements = new Map(
     schema.data_requirements.map((requirement) => [requirement.key, requirement.type]),
@@ -163,6 +176,17 @@ export function validateDashboardSchema(schema: DashboardSchema): RendererStatus
 
 export function isImplementedWidgetType(type: WidgetType): type is ImplementedWidgetType {
   return implementedWidgets.includes(type as ImplementedWidgetType);
+}
+
+function isDataRequirementValid(requirement: DashboardDataRequirement) {
+  if (requirement.filters === undefined) return true;
+  if (requirement.type !== "portfolio_positions") return false;
+  if (requirement.filters === null || typeof requirement.filters !== "object") return false;
+
+  return (
+    hasOnlyOptionKeys(requirement.filters, ["holding_status"]) &&
+    requirement.filters.holding_status === "HELD_OR_WATCHLISTED"
+  );
 }
 
 function isWidgetBindingValid(widget: DashboardWidget, dataRequirements: Map<string, DashboardDataType>) {
