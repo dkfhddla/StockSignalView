@@ -73,6 +73,28 @@ def test_default_dashboard_endpoint_does_not_mask_unrelated_errors(client: TestC
         client.get("/dashboards/default")
 
 
+def test_unrelated_errors_use_safe_json_wire_response() -> None:
+    def raise_unrelated_error() -> dict:
+        raise RuntimeError("sensitive internal detail")
+
+    app.dependency_overrides[get_default_dashboard_candidate] = raise_unrelated_error
+    try:
+        with TestClient(app, raise_server_exceptions=False) as wire_client:
+            response = wire_client.get("/dashboards/default")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 500
+    assert response.headers["content-type"].startswith("application/json")
+    assert response.json() == {
+        "error": {
+            "code": "internal_server_error",
+            "message": "An unexpected server error occurred.",
+        }
+    }
+    assert "sensitive internal detail" not in response.text
+
+
 def test_openapi_documents_success_and_validation_failure_models(client: TestClient) -> None:
     operation = client.get("/openapi.json").json()["paths"]["/dashboards/default"]["get"]
 
@@ -87,4 +109,5 @@ def test_openapi_documents_success_and_validation_failure_models(client: TestCli
 
 def _with_invalid_semantic_binding(candidate: dict) -> dict:
     candidate["data_requirements"][0]["type"] = "trades"
+    candidate["data_requirements"][0].pop("filters", None)
     return candidate

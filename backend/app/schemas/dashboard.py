@@ -52,10 +52,20 @@ class DashboardLayout(StrictModel):
     columns: DashboardColumns
 
 
+class PortfolioPositionFilters(StrictModel):
+    holding_status: Literal["HELD_OR_WATCHLISTED"]
+
+
 class DashboardDataRequirement(StrictModel):
     key: NonEmptyString
     type: DashboardDataType
-    filters: dict[str, str] | None = None
+    filters: PortfolioPositionFilters | None = None
+
+    @model_validator(mode="after")
+    def validate_filters_for_data_type(self) -> DashboardDataRequirement:
+        if self.filters is not None and self.type is not DashboardDataType.PORTFOLIO_POSITIONS:
+            raise ValueError("filters are only supported for portfolio_positions")
+        return self
 
 
 class WidgetLayout(StrictModel):

@@ -28,6 +28,16 @@
 - `backend/app/services/schema_validation.py`: 위젯 데이터 바인딩 의미 검증
 - `backend/tests/`: 구조, 의미 검증, HTTP 성공·실패 경로
 
+`GET /dashboards/default` 응답 계약:
+
+- 성공 시 `200 OK`와 검증된 Dashboard Schema v1 전체를 반환한다.
+- 구조 또는 의미 검증 실패 시 `500 Internal Server Error`와
+  `error.code = "dashboard_schema_validation_failed"`를 반환한다.
+- 그 밖의 예상하지 못한 서버 오류는 `500 Internal Server Error`와
+  `error.code = "internal_server_error"`를 반환한다.
+- 모든 오류 응답은 `{"error": {"code": "...", "message": "..."}}`
+  형태이며 스키마 일부나 내부 예외 상세를 노출하지 않는다.
+
 나머지 API, 계산 서비스, 영속 모델, 작업 스케줄러는 이 문서의 경계를
 따르는 후속 구현 범위다.
 

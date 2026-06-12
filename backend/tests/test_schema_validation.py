@@ -18,6 +18,11 @@ def _single_widget_payload(widget: dict, data_requirements: list[dict]) -> dict:
     return payload
 
 
+def _change_positions_requirement_to_trades(payload: dict) -> None:
+    payload["data_requirements"][0]["type"] = "trades"
+    payload["data_requirements"][0].pop("filters", None)
+
+
 def test_default_dashboard_is_fresh_and_valid() -> None:
     first = build_default_dashboard()
     second = build_default_dashboard()
@@ -128,7 +133,7 @@ def test_validator_accepts_registered_widget_bindings(widget: dict, data_require
             "is not declared",
         ),
         (
-            lambda payload: payload["data_requirements"][0].update(type="trades"),
+            _change_positions_requirement_to_trades,
             "requires portfolio_positions",
         ),
         (

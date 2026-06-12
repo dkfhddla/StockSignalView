@@ -125,6 +125,40 @@ def test_dashboard_schema_rejects_duplicate_widget_ids(valid_dashboard_payload: 
         DashboardSchema.model_validate(payload)
 
 
+@pytest.mark.parametrize(
+    "filters",
+    [
+        {"endpoint": "https://example.com/feed"},
+        {"query": "DROP TABLE trades"},
+        {"holding_status": "ALL"},
+    ],
+)
+def test_dashboard_schema_rejects_unsupported_filters(
+    valid_dashboard_payload: dict,
+    filters: dict[str, str],
+) -> None:
+    payload = deepcopy(valid_dashboard_payload)
+    payload["data_requirements"][0]["filters"] = filters
+
+    with pytest.raises(ValidationError):
+        DashboardSchema.model_validate(payload)
+
+
+def test_dashboard_schema_rejects_filters_for_other_data_types(
+    valid_dashboard_payload: dict,
+) -> None:
+    payload = deepcopy(valid_dashboard_payload)
+    payload["data_requirements"][0] = {
+        "key": "trades",
+        "type": "trades",
+        "filters": {"holding_status": "HELD_OR_WATCHLISTED"},
+    }
+    payload["widgets"] = []
+
+    with pytest.raises(ValidationError, match="filters are only supported"):
+        DashboardSchema.model_validate(payload)
+
+
 def test_dashboard_error_response_has_stable_envelope() -> None:
     response = DashboardErrorResponse.model_validate(
         {

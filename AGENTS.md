@@ -2,7 +2,7 @@
 
 ## Overview
 
-StockSignalView is a documentation-first project for an investment operations system that turns trade records, investment notes, and market-relative performance into AI-generated dynamic dashboards. The repository is currently in the contract-definition phase: the core product, architecture, and dashboard-schema documents are in place, while the executable backend and frontend are still planned.
+StockSignalView is a documentation-first project for an investment operations system that turns trade records, investment notes, and market-relative performance into AI-generated dynamic dashboards. The repository includes a React/Vite Dashboard Schema renderer and a FastAPI default-dashboard backend slice; the remaining MVP services are still planned.
 
 ## Golden Path
 
@@ -44,11 +44,14 @@ Trade record
 
 ## Commands
 
-There is no runnable app yet. During the current phase, useful commands are document-oriented:
+Useful commands for the current implementation stage:
 
 - `rg --files`
 - `rg "<term>" docs README.md MAP.md AGENTS.md`
 - `git diff --stat`
+- `cd frontend && pnpm build`
+- `cd backend && python -m pytest -q`
+- `cd backend && python -m uvicorn app.main:app`
 
 ## Documentation Rules
 
