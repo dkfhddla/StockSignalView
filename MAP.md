@@ -12,15 +12,15 @@
 
 ## 애플리케이션 경로
 
-- `backend/`: 후속 FastAPI 백엔드 구현 위치.
+- `backend/`: FastAPI 백엔드 구현 위치. 기본 대시보드 API와 스키마 검증 슬라이스가 구현되어 있다.
 - `backend/app/api/`: API 라우터 위치.
 - `backend/app/core/`: 설정, 보안 기본값, 공통 유틸리티 위치.
 - `backend/app/models/`: 데이터 모델 위치.
 - `backend/app/schemas/`: 요청/응답 스키마 위치.
-- `backend/app/services/`: 포트폴리오, 성과, 알림 서비스 위치.
+- `backend/app/services/`: 대시보드 프리셋·스키마 검증과 후속 포트폴리오, 성과, 알림 서비스 위치.
 - `backend/app/jobs/`: 스케줄러와 백그라운드 작업 위치.
 - `backend/tests/`: 백엔드 테스트 위치.
-- `frontend/`: 후속 React/Vite 프론트엔드 구현 위치.
+- `frontend/`: Dashboard Schema 렌더러를 포함한 React/Vite 프론트엔드 구현 위치.
 - `frontend/public/`: 정적 자산 위치.
 - `frontend/src/app/`: 앱 셸과 라우팅 위치.
 - `frontend/src/components/`: 공통 UI 컴포넌트 위치.
@@ -54,4 +54,4 @@
 - 서비스 경계, 데이터 흐름, 외부 연동 위치는 `docs/arch/`에 둔다.
 - 기술 선택, 보안 기본값, 장기 유지보수에 영향을 주는 결정은 `docs/adr/`에 둔다.
 - 문서 운영 규칙과 리뷰 기준은 `docs/guidelines/`에 둔다.
-- 실행 코드는 후속 구현에서 `backend/`와 `frontend/` 아래에 둔다.
+- 실행 코드는 `backend/`와 `frontend/` 아래에 두며, 미구현 MVP 슬라이스도 같은 경계를 따른다.

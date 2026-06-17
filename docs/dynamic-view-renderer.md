@@ -61,6 +61,12 @@ Dashboard Schema 수신
 - `position_summary`
 - `position_table`
 - `position_cards`
+
+현재 MVP 화면에서 위 세 위젯은 실제 시각 렌더링을 제공한다.
+
+다음 위젯은 Dashboard Schema v1에 등록되어 있고 검증 대상에는 포함되지만,
+현재 MVP 화면 조각에서는 placeholder로만 표시된다.
+
 - `relative_return_chart`
 - `decision_timeline`
 - `alert_status_list`

@@ -185,8 +185,8 @@ PC는 표 중심 레이아웃, 모바일은 카드형 레이아웃을 우선 적
 - `docs/product-requirements/stock-signal-view.md`: 핵심 사용자 흐름과 성공 기준 - accepted
 - `docs/arch/overview.md`: 백엔드/프론트엔드 구조 책임의 분리와 데이터 흐름 전제 - accepted
 - `MAP.md`: 구현 경로(`backend/`, `frontend/`, `backend/tests/`)의 소유 책임 - accepted
-- `backend/tests`: 실행 계약 준비 상태 - not run (구현 전)
-- `backend/app` / `frontend/src`: 계약 집계 저장소 - implementation pending (실구현 전)
+- `backend/tests`: 기본 Dashboard Schema 구조·의미 검증과 기본 대시보드 API 회귀 테스트 - passing
+- `backend/app` / `frontend/src`: 기본 대시보드 API와 Dashboard Schema 렌더러 슬라이스 - partially implemented
 
 ## 에이전트 컨텍스트
 

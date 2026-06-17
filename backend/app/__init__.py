@@ -1,0 +1,1 @@
+"""StockSignalView backend application package."""

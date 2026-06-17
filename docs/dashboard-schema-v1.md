@@ -39,7 +39,22 @@ AI는 화면 코드를 생성하지 않는다. AI는 사용자의 질문과 투�
       }
     }
   ],
-  "widgets": []
+  "widgets": [
+    {
+      "widget_id": "portfolio-summary",
+      "type": "position_summary",
+      "title": "포트폴리오 요약",
+      "data_key": "positions",
+      "layout": {
+        "desktop_span": 12,
+        "mobile_order": 1
+      },
+      "options": {
+        "show_unavailable_count": true,
+        "highlight_metric": "relative_return_rate"
+      }
+    }
+  ]
 }
 ```
 
@@ -102,6 +117,9 @@ AI는 화면 코드를 생성하지 않는다. AI는 사용자의 질문과 투�
 ## 검증 규칙
 
 - `schema_version`이 지원 버전이 아니면 거부한다.
+- `data_requirements`와 `widgets`는 각각 하나 이상의 항목을 포함해야 한다.
+- `data_requirements[*].key`는 대시보드 안에서 고유해야 한다.
+- `widgets[*].widget_id`는 대시보드 안에서 고유해야 한다.
 - `widgets[*].type`이 위젯 레지스트리에 없으면 거부한다.
 - `widgets[*]`는 `data_key` 또는 `data_keys` 중 하나 이상을 가져야 한다.
 - `widgets[*].data_key`가 있으면 그 값이 `data_requirements[*].key`에 있어야 한다.
@@ -112,6 +130,12 @@ AI는 화면 코드를 생성하지 않는다. AI는 사용자의 질문과 투�
 - 위젯 옵션에 레지스트리가 허용하지 않은 필드가 있으면 거부한다.
 - 문자열은 화면 표시 목적의 평문으로 취급하며 HTML로 해석하지 않는다.
 - 외부 URL, 스크립트, 함수 본문, SQL, Python/JavaScript 코드 조각은 허용하지 않는다.
+
+MVP 필터 계약:
+
+- `filters`는 `portfolio_positions` 데이터 요구사항에서만 사용할 수 있다.
+- 허용 필터는 `holding_status: "HELD_OR_WATCHLISTED"` 하나다.
+- 다른 필터 키, 다른 값, URL, 쿼리, 코드 형태의 필터 정의는 거부한다.
 
 ## MVP 기본 프리셋
 
