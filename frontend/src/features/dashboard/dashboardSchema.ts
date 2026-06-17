@@ -158,17 +158,35 @@ const positionTableColumns: PositionTableColumn[] = [
   "calculation_status",
 ];
 
-export function validateDashboardSchema(schema: DashboardSchema): RendererStatus {
+export function validateDashboardSchema(schema: unknown): RendererStatus {
+  if (!isRecord(schema)) return "INVALID_SCHEMA";
   if (schema.schema_version !== "1.0") return "INVALID_SCHEMA";
+  if (!Array.isArray(schema.data_requirements) || schema.data_requirements.length === 0) {
+    return "INVALID_SCHEMA";
+  }
+  if (!Array.isArray(schema.widgets) || schema.widgets.length === 0) {
+    return "INVALID_SCHEMA";
+  }
   if (schema.data_requirements.some((requirement) => !isDataRequirementValid(requirement))) {
     return "INVALID_SCHEMA";
   }
+  if (schema.widgets.some((widget) => !isWidgetShapeValid(widget))) {
+    return "INVALID_SCHEMA";
+  }
 
-  const dataRequirements = new Map(
-    schema.data_requirements.map((requirement) => [requirement.key, requirement.type]),
+  const dataRequirements = schema.data_requirements as DashboardDataRequirement[];
+  const widgets = schema.widgets as DashboardWidget[];
+  const dataRequirementKeys = dataRequirements.map((requirement) => requirement.key);
+  const widgetIds = widgets.map((widget) => widget.widget_id);
+  if (!hasUniqueValues(dataRequirementKeys) || !hasUniqueValues(widgetIds)) {
+    return "INVALID_SCHEMA";
+  }
+
+  const dataRequirementTypes = new Map(
+    dataRequirements.map((requirement) => [requirement.key, requirement.type]),
   );
-  const hasInvalidWidget = schema.widgets.some((widget) => {
-    return !registeredWidgets.includes(widget.type) || !isWidgetBindingValid(widget, dataRequirements) || !areOptionsValid(widget);
+  const hasInvalidWidget = widgets.some((widget) => {
+    return !isWidgetBindingValid(widget, dataRequirementTypes) || !areOptionsValid(widget);
   });
 
   return hasInvalidWidget ? "INVALID_SCHEMA" : "READY";
@@ -178,15 +196,32 @@ export function isImplementedWidgetType(type: WidgetType): type is ImplementedWi
   return implementedWidgets.includes(type as ImplementedWidgetType);
 }
 
-function isDataRequirementValid(requirement: DashboardDataRequirement) {
+function isDataRequirementValid(requirement: unknown): requirement is DashboardDataRequirement {
+  if (!isRecord(requirement)) return false;
+  if (typeof requirement.key !== "string" || requirement.key.trim() === "") return false;
+  if (!isDashboardDataType(requirement.type)) return false;
   if (requirement.filters === undefined) return true;
   if (requirement.type !== "portfolio_positions") return false;
-  if (requirement.filters === null || typeof requirement.filters !== "object") return false;
+  if (!isRecord(requirement.filters)) return false;
 
   return (
     hasOnlyOptionKeys(requirement.filters, ["holding_status"]) &&
     requirement.filters.holding_status === "HELD_OR_WATCHLISTED"
   );
+}
+
+function isWidgetShapeValid(widget: unknown): widget is DashboardWidget {
+  if (!isRecord(widget)) return false;
+  if (typeof widget.widget_id !== "string" || widget.widget_id.trim() === "") return false;
+  if (typeof widget.title !== "string" || widget.title.trim() === "") return false;
+  if (!isWidgetType(widget.type)) return false;
+  if (!isRecord(widget.layout)) return false;
+  if (typeof widget.layout.desktop_span !== "number" || typeof widget.layout.mobile_order !== "number") return false;
+  if (widget.type === "alert_status_list") {
+    return Array.isArray(widget.data_keys) && widget.data_keys.every((dataKey) => typeof dataKey === "string");
+  }
+
+  return typeof widget.data_key === "string" && widget.data_key.trim() !== "";
 }
 
 function isWidgetBindingValid(widget: DashboardWidget, dataRequirements: Map<string, DashboardDataType>) {
@@ -227,6 +262,7 @@ function areOptionsValid(widget: DashboardWidget) {
       return (
         hasOnlyOptionKeys(widget.options, ["columns", "sort", "limit"]) &&
         hasOnlyOptionKeys(widget.options.sort, ["field", "direction"]) &&
+        Array.isArray(widget.options.columns) &&
         widget.options.columns.every((column) => positionTableColumns.includes(column)) &&
         positionTableColumns.includes(widget.options.sort.field) &&
         widget.options.columns.includes(widget.options.sort.field) &&
@@ -253,7 +289,9 @@ function areOptionsValid(widget: DashboardWidget) {
         typeof widget.options.show_profit_context === "boolean" &&
         (widget.options.stock_id === undefined || typeof widget.options.stock_id === "string") &&
         (widget.options.trade_types === undefined ||
+          (Array.isArray(widget.options.trade_types) &&
           widget.options.trade_types.every((tradeType) => ["BUY", "SELL"].includes(tradeType)))
+        )
       );
     case "alert_status_list":
       return (
@@ -264,10 +302,32 @@ function areOptionsValid(widget: DashboardWidget) {
   }
 }
 
-function hasOnlyOptionKeys(options: object, allowedKeys: string[]) {
-  return Object.keys(options).every((key) => allowedKeys.includes(key));
+function hasOnlyOptionKeys(options: unknown, allowedKeys: string[]) {
+  return isRecord(options) && Object.keys(options).every((key) => allowedKeys.includes(key));
 }
 
 function isOptionalPositiveNumber(value: number | undefined) {
   return value === undefined || (Number.isFinite(value) && value > 0);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isDashboardDataType(value: unknown): value is DashboardDataType {
+  return (
+    value === "stocks" ||
+    value === "portfolio_positions" ||
+    value === "trades" ||
+    value === "alert_rules" ||
+    value === "alert_events"
+  );
+}
+
+function isWidgetType(value: unknown): value is WidgetType {
+  return typeof value === "string" && registeredWidgets.includes(value as WidgetType);
+}
+
+function hasUniqueValues(values: string[]) {
+  return values.length === new Set(values).size;
 }

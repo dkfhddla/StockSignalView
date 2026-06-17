@@ -50,8 +50,12 @@ function withFilters(filters, type = "portfolio_positions") {
   };
 }
 
+function validSchema() {
+  return withFilters({ holding_status: "HELD_OR_WATCHLISTED" });
+}
+
 test("accepts the supported portfolio position filter", () => {
-  const schema = withFilters({ holding_status: "HELD_OR_WATCHLISTED" });
+  const schema = validSchema();
 
   assert.equal(validateDashboardSchema(schema), "READY");
 });
@@ -78,4 +82,72 @@ test("rejects filters on non-portfolio data requirements", () => {
   const schema = withFilters({ holding_status: "HELD_OR_WATCHLISTED" }, "trades");
 
   assert.equal(validateDashboardSchema(schema), "INVALID_SCHEMA");
+});
+
+test("rejects empty data requirements and widgets", () => {
+  const emptyDataRequirements = validSchema();
+  emptyDataRequirements.data_requirements = [];
+
+  const emptyWidgets = validSchema();
+  emptyWidgets.widgets = [];
+
+  assert.equal(validateDashboardSchema(emptyDataRequirements), "INVALID_SCHEMA");
+  assert.equal(validateDashboardSchema(emptyWidgets), "INVALID_SCHEMA");
+});
+
+test("rejects duplicate data requirement keys and widget ids", () => {
+  const duplicateDataKey = validSchema();
+  duplicateDataKey.data_requirements.push({ ...duplicateDataKey.data_requirements[0] });
+
+  const duplicateWidgetId = validSchema();
+  duplicateWidgetId.widgets.push({ ...duplicateWidgetId.widgets[0] });
+
+  assert.equal(validateDashboardSchema(duplicateDataKey), "INVALID_SCHEMA");
+  assert.equal(validateDashboardSchema(duplicateWidgetId), "INVALID_SCHEMA");
+});
+
+test("rejects malformed schema structures without throwing", () => {
+  const malformedCases = [
+    null,
+    {},
+    { ...validSchema(), data_requirements: null },
+    { ...validSchema(), data_requirements: [null] },
+    { ...validSchema(), widgets: null },
+    { ...validSchema(), widgets: [null] },
+  ];
+
+  for (const schema of malformedCases) {
+    assert.equal(validateDashboardSchema(schema), "INVALID_SCHEMA");
+  }
+});
+
+test("rejects malformed widget options without throwing", () => {
+  const missingOptions = validSchema();
+  delete missingOptions.widgets[0].options;
+
+  const nullOptions = validSchema();
+  nullOptions.widgets[0].options = null;
+
+  const missingSort = validSchema();
+  missingSort.widgets[0] = {
+    ...missingSort.widgets[0],
+    type: "position_table",
+    options: {
+      columns: ["relative_return_rate"],
+    },
+  };
+
+  const nullSort = validSchema();
+  nullSort.widgets[0] = {
+    ...nullSort.widgets[0],
+    type: "position_table",
+    options: {
+      columns: ["relative_return_rate"],
+      sort: null,
+    },
+  };
+
+  for (const schema of [missingOptions, nullOptions, missingSort, nullSort]) {
+    assert.equal(validateDashboardSchema(schema), "INVALID_SCHEMA");
+  }
 });
