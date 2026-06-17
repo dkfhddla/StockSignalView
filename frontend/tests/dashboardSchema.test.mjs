@@ -151,3 +151,54 @@ test("rejects malformed widget options without throwing", () => {
     assert.equal(validateDashboardSchema(schema), "INVALID_SCHEMA");
   }
 });
+
+test("rejects missing or invalid root fields", () => {
+  const missingTitle = validSchema();
+  delete missingTitle.title;
+
+  const blankDashboardId = validSchema();
+  blankDashboardId.dashboard_id = " ";
+
+  const invalidSource = validSchema();
+  invalidSource.source = "REMOTE";
+
+  for (const schema of [missingTitle, blankDashboardId, invalidSource]) {
+    assert.equal(validateDashboardSchema(schema), "INVALID_SCHEMA");
+  }
+});
+
+test("rejects invalid layout contracts", () => {
+  const missingLayout = validSchema();
+  delete missingLayout.layout;
+
+  const invalidLayoutType = validSchema();
+  invalidLayoutType.layout.type = "fixed_grid";
+
+  const zeroDesktopColumns = validSchema();
+  zeroDesktopColumns.layout.columns.desktop = 0;
+
+  const fractionalMobileColumns = validSchema();
+  fractionalMobileColumns.layout.columns.mobile = 1.5;
+
+  for (const schema of [missingLayout, invalidLayoutType, zeroDesktopColumns, fractionalMobileColumns]) {
+    assert.equal(validateDashboardSchema(schema), "INVALID_SCHEMA");
+  }
+});
+
+test("rejects extra keys outside allowed schema contracts", () => {
+  const extraRootKey = validSchema();
+  extraRootKey.endpoint = "https://example.com/feed";
+
+  const extraLayoutKey = validSchema();
+  extraLayoutKey.layout.script = "alert(1)";
+
+  const extraRequirementKey = validSchema();
+  extraRequirementKey.data_requirements[0].query = "DROP TABLE trades";
+
+  const extraWidgetKey = validSchema();
+  extraWidgetKey.widgets[0].html = "<script>alert(1)</script>";
+
+  for (const schema of [extraRootKey, extraLayoutKey, extraRequirementKey, extraWidgetKey]) {
+    assert.equal(validateDashboardSchema(schema), "INVALID_SCHEMA");
+  }
+});

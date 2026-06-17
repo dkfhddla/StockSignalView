@@ -128,6 +128,7 @@ def test_dashboard_schema_rejects_duplicate_widget_ids(valid_dashboard_payload: 
 @pytest.mark.parametrize(
     "filters",
     [
+        None,
         {"endpoint": "https://example.com/feed"},
         {"query": "DROP TABLE trades"},
         {"holding_status": "ALL"},

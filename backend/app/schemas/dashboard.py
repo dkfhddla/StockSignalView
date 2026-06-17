@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Annotated, Literal, Union
+from typing import Annotated, Any, Literal, Union
 
 from pydantic import BaseModel, ConfigDict, Field, PositiveInt, StringConstraints, model_validator
 
@@ -60,6 +60,13 @@ class DashboardDataRequirement(StrictModel):
     key: NonEmptyString
     type: DashboardDataType
     filters: PortfolioPositionFilters | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def reject_null_filters(cls, data: Any) -> Any:
+        if isinstance(data, dict) and "filters" in data and data["filters"] is None:
+            raise ValueError("filters must be omitted or define a supported filter")
+        return data
 
     @model_validator(mode="after")
     def validate_filters_for_data_type(self) -> DashboardDataRequirement:
