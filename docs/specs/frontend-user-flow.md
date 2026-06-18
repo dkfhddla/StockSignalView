@@ -194,3 +194,6 @@
 - [ ] `PARTIAL`, `UNAVAILABLE`, `EMPTY` 상태가 구분되어 사용자에게 이해
   가능하게 보인다.
 - [ ] 모바일과 PC 모두에서 기본 흐름이 깨지지 않는다.
+
+이 문서의 화면 상태, 반응형 의미 보존, 수동 탐색 검사의 상세 분류는
+`docs/guidelines/mvp-verification-strategy.md`를 따른다.

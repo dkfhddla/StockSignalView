@@ -249,3 +249,6 @@ AI Dashboard Request
 - [ ] 프론트엔드가 기대하는 상태 값(`PARTIAL`, `UNAVAILABLE`, `TRIGGERED`)이
       백엔드 슬라이스에서 일관되게 생산된다.
 - [ ] 후속 확장(뉴스/공시/브로커)이 MVP 계산 경계를 깨지 않고 추가 가능하다.
+
+이 문서가 정의한 레이어를 어떤 검증 계층에서 우선 다룰지는
+`docs/guidelines/mvp-verification-strategy.md`를 따른다.
