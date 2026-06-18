@@ -84,3 +84,6 @@ Dashboard Schema 수신
 - 미등록 위젯 타입은 화면 표시 전에 거부된다.
 - HTML 또는 스크립트처럼 보이는 문자열은 실행되지 않고 평문 또는 거부 상태로 처리된다.
 - 데이터 부족 상태가 사용자에게 이해 가능한 메시지로 표시된다.
+
+검증 계층 선택, 공유 계약 fixture 범위, 자동화 우선순위와 수동 검사 한계는
+`docs/guidelines/mvp-verification-strategy.md`를 따른다.

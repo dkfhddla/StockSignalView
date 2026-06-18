@@ -180,6 +180,9 @@ PC는 표 중심 레이아웃, 모바일은 카드형 레이아웃을 우선 적
 - `backend`/`frontend`: 외부 API 없이 수동 입력 또는 모의 데이터 주입으로 핵심 경로를 재현 가능한 실행으로 확인한다.
 - `docs/specs/mvp-foundation.md`: 수락 기준을 기준으로 스펙 충족 여부 자체는 문서 일관성 리뷰로 점검한다.
 
+계층별 검증 분류, 초기 자동화 우선순위, 수동 검사 한계는
+`docs/guidelines/mvp-verification-strategy.md`를 따른다.
+
 ## 근거 포인터
 
 - `docs/product-requirements/stock-signal-view.md`: 핵심 사용자 흐름과 성공 기준 - accepted
