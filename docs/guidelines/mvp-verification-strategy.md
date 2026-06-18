@@ -82,8 +82,8 @@ Widget Registry, Dynamic View Renderer 계약은 각각의 최상위 `docs/*.md`
 - 실제 애플리케이션 진입점을 통해 요청 검증, 응답 형식, 상태 코드, 서비스 위임,
   영속성 경계를 검증한다.
 - 정상 CRUD와 대표 실패 계약을 검증한다.
-- 미존재 리소스, 중복 종목, 충돌하는 갱신, 매도 수량 초과, 누락·잘못된 입력을
-  관찰 가능한 API 실패로 확인한다.
+- 미존재 리소스, 중복 종목, 매도 수량 초과, 누락·잘못된 입력처럼 소유 계약에
+  정의된 실패를 관찰 가능한 API 실패로 확인한다.
 
 반복하지 않을 것:
 
@@ -127,10 +127,10 @@ fixture가 증명해야 할 최소 범위:
 | MVP 표면 | 소유 계약 | 주 검증 계층 | 최소 자동화 증거 | 허용 수동 검사 |
 | --- | --- | --- | --- | --- |
 | 종목 CRUD, 관심 종목, 종목 메모 | [mvp-foundation.md](../specs/mvp-foundation.md), [stock-signal-view-data-model.md](../specs/stock-signal-view-data-model.md), [backend-architecture-slices.md](../arch/backend-architecture-slices.md) | 서비스, API 통합 | 등록·조회·수정·삭제가 서비스 상태를 일관되게 바꾸고, 중복 종목과 미존재 종목 요청이 API 실패 계약으로 관찰된다. | 화면 문구와 목록 밀도 확인 |
-| 거래 CRUD와 입력 유효성 | [mvp-foundation.md](../specs/mvp-foundation.md), [stock-signal-view-data-model.md](../specs/stock-signal-view-data-model.md) | 백엔드 단위, 서비스, API 통합 | 수량·가격 0 이하, 수수료·세금 음수, 누락 입력, 보유 수량 초과 매도를 거부한다. 거래 생성·수정·삭제 API는 미존재·충돌 실패를 구분한다. | 입력 폼 사용성 탐색 |
+| 거래 CRUD와 입력 유효성 | [mvp-foundation.md](../specs/mvp-foundation.md), [stock-signal-view-data-model.md](../specs/stock-signal-view-data-model.md) | 백엔드 단위, 서비스, API 통합 | 수량·가격 0 이하, 수수료·세금 음수, 누락 입력, 보유 수량 초과 매도를 거부한다. 거래 생성·수정·삭제 API는 미존재 거래와 소유 계약에 정의된 입력 실패를 구분한다. | 입력 폼 사용성 탐색 |
 | 거래 변경 후 재계산 | [mvp-foundation.md](../specs/mvp-foundation.md), [backend-architecture-slices.md](../arch/backend-architecture-slices.md) | 서비스 | 거래 생성·수정·삭제 후 보유 수량, 평균 매수가, 평가손익, 실현손익, 상대수익률 파생값이 다시 산출된다. | 없음 |
 | 이동평균법 기반 보유 수량, 평단가, 실현손익 | [stock-signal-view-calculation-rules.md](../specs/stock-signal-view-calculation-rules.md), [stock-signal-view-data-model.md](../specs/stock-signal-view-data-model.md) | 백엔드 단위 | 추가 매수, 부분 매도, 전량 매도, 전량 매도 후 재매수 사례가 평균 매수가와 실현손익 규칙을 만족한다. | 없음 |
-| 평가금액, 평가손익, 포트폴리오 비중 | [stock-signal-view-calculation-rules.md](../specs/stock-signal-view-calculation-rules.md), [mvp-foundation.md](../specs/mvp-foundation.md) | 백엔드 단위, 서비스 | 현재가 결측, 보유 수량 0, 전체 평가금액 0 또는 산출 불가 상태가 0으로 위장되지 않고 계산 상태로 분류된다. | 없음 |
+| 평가금액, 평가손익, 포트폴리오 비중 | [stock-signal-view-calculation-rules.md](../specs/stock-signal-view-calculation-rules.md), [mvp-foundation.md](../specs/mvp-foundation.md) | 백엔드 단위, 서비스 | 현재가 결측, 보유 수량 0, 소유 계산 규칙에서 정의한 산출 불가 상태가 0으로 위장되지 않고 계산 상태로 분류된다. | 없음 |
 | 종목 수익률, 시장 수익률, 상대수익률, 강·약세 | [stock-signal-view-calculation-rules.md](../specs/stock-signal-view-calculation-rules.md), [mvp-foundation.md](../specs/mvp-foundation.md) | 백엔드 단위 | 기준일 종목 기준가 0, 기준일 시장 지수 0, 현재가 결측, 시장 지수 결측, KOSPI/KOSDAQ 매핑, 상대수익률 강·약세 분류를 검증한다. | 없음 |
 | 결측 상태와 계산·화면 상태 | [stock-signal-view-data-model.md](../specs/stock-signal-view-data-model.md), [frontend-user-flow.md](../specs/frontend-user-flow.md), [widget-registry.md](../widget-registry.md) | 백엔드 단위, 프론트엔드 렌더링 | 계산 상태 `CALCULATED`, `PARTIAL`, `UNAVAILABLE`와 화면·렌더러 상태 `EMPTY`가 구분되고, 데이터 부족을 성공 상태처럼 숨기지 않는다. | 문구 이해 가능성 점검 |
 | Dashboard Schema 생성과 검증 순서 | [dashboard-schema-v1.md](../dashboard-schema-v1.md), [backend-architecture-slices.md](../arch/backend-architecture-slices.md), [frontend-user-flow.md](../specs/frontend-user-flow.md) | 서비스, 공유 계약 fixture | 생성 결과가 스키마 버전, 위젯 타입, 데이터 요구사항, 옵션 검증을 통과한 뒤에만 렌더러 소비자에게 전달된다. 검증 실패는 렌더링 가능한 결과로 가장하지 않는다. | 없음 |
@@ -148,7 +148,8 @@ fixture가 증명해야 할 최소 범위:
   분류
 - 유효성: 종목 중복, 허용 시장, 거래 수량·가격·수수료·세금 경계, 보유 수량
   초과 매도
-- API 실패 계약: 미존재 리소스, 중복 생성, 충돌하는 변경, 누락·잘못된 입력
+- API 실패 계약: 미존재 리소스, 중복 생성, 누락·잘못된 입력처럼 소유 계약에
+  정의된 실패
 - 서비스 흐름: 거래 변경 후 재계산, Dashboard Schema 생성 후 검증 순서
 - 대시보드 계약: 유효·무효 Schema, 미등록 위젯, 데이터 바인딩 실패
 - 안전 금지 동작: 코드, HTML, 스크립트, 외부 URL 문자열 비실행
