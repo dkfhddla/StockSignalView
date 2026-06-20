@@ -65,6 +65,7 @@ export function DashboardPage() {
         <section className="renderer-error">
           <strong>대시보드 스키마를 표시할 수 없습니다.</strong>
           <p>백엔드 기본 대시보드 응답이 프론트엔드 검증을 통과하지 못했습니다.</p>
+          <p>백엔드 상태와 Dashboard Schema 계약을 확인한 뒤 다시 시도하세요.</p>
         </section>
       ) : (
         <DashboardRenderer

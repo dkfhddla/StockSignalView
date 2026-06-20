@@ -244,3 +244,27 @@ test("rejects default dashboard responses that fail frontend schema validation",
     },
   );
 });
+test("rejects malformed default dashboard JSON as schema validation failure", async () => {
+  await withMockFetch(
+    async () => new Response("not json", { status: 200 }),
+    async () => {
+      await assert.rejects(fetchDefaultDashboard, DashboardSchemaValidationError);
+    },
+  );
+});
+
+test("maps backend default dashboard validation errors to schema validation failure", async () => {
+  const errorResponse = {
+    error: {
+      code: "dashboard_schema_validation_failed",
+      message: "The default dashboard schema failed validation.",
+    },
+  };
+
+  await withMockFetch(
+    async () => new Response(JSON.stringify(errorResponse), { status: 500 }),
+    async () => {
+      await assert.rejects(fetchDefaultDashboard, DashboardSchemaValidationError);
+    },
+  );
+});
