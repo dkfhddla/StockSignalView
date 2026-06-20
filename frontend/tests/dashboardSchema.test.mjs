@@ -12,6 +12,9 @@ const vite = await createServer({
 const { validateDashboardSchema } = await vite.ssrLoadModule(
   "/src/features/dashboard/dashboardSchema.ts",
 );
+const { DashboardSchemaValidationError, fetchDefaultDashboard } = await vite.ssrLoadModule(
+  "/src/lib/dashboardApi.ts",
+);
 
 after(async () => {
   await vite.close();
@@ -201,4 +204,43 @@ test("rejects extra keys outside allowed schema contracts", () => {
   for (const schema of [extraRootKey, extraLayoutKey, extraRequirementKey, extraWidgetKey]) {
     assert.equal(validateDashboardSchema(schema), "INVALID_SCHEMA");
   }
+});
+async function withMockFetch(fetchImplementation, callback) {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = fetchImplementation;
+
+  try {
+    await callback();
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+}
+
+test("fetches and returns a validated default dashboard", async () => {
+  const schema = validSchema();
+
+  await withMockFetch(
+    async () => new Response(JSON.stringify(schema), { status: 200 }),
+    async () => {
+      assert.deepEqual(await fetchDefaultDashboard(), schema);
+    },
+  );
+});
+
+test("rejects non-OK default dashboard responses", async () => {
+  await withMockFetch(
+    async () => new Response("{}", { status: 500 }),
+    async () => {
+      await assert.rejects(fetchDefaultDashboard, /Default dashboard request failed with 500/);
+    },
+  );
+});
+
+test("rejects default dashboard responses that fail frontend schema validation", async () => {
+  await withMockFetch(
+    async () => new Response(JSON.stringify({}), { status: 200 }),
+    async () => {
+      await assert.rejects(fetchDefaultDashboard, DashboardSchemaValidationError);
+    },
+  );
 });

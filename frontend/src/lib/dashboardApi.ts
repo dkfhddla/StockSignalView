@@ -5,6 +5,13 @@ import {
 
 const DEFAULT_DASHBOARD_ENDPOINT = "/dashboards/default";
 
+export class DashboardSchemaValidationError extends Error {
+  constructor() {
+    super("Default dashboard response failed frontend schema validation");
+    this.name = "DashboardSchemaValidationError";
+  }
+}
+
 export async function fetchDefaultDashboard(signal?: AbortSignal): Promise<DashboardSchema> {
   const response = await fetch(DEFAULT_DASHBOARD_ENDPOINT, {
     headers: {
@@ -20,7 +27,7 @@ export async function fetchDefaultDashboard(signal?: AbortSignal): Promise<Dashb
   const dashboard = await response.json();
 
   if (validateDashboardSchema(dashboard) !== "READY") {
-    throw new Error("Default dashboard response failed frontend schema validation");
+    throw new DashboardSchemaValidationError();
   }
 
   return dashboard as DashboardSchema;
