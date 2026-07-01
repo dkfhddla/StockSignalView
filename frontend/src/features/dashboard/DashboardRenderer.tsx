@@ -13,6 +13,7 @@ import { PositionTable } from "./widgets/PositionTable";
 type DashboardRendererProps = {
   schema: DashboardSchema;
   positions: Holding[];
+  schemaSourceMessage: string;
   summaryPositions: Holding[];
   activeFilter: string;
   onFilterChange: (filter: string) => void;
@@ -23,6 +24,7 @@ const filters = ["전체", "보유", "관심", "강세", "약세", "알림 발�
 export function DashboardRenderer({
   schema,
   positions,
+  schemaSourceMessage,
   summaryPositions,
   activeFilter,
   onFilterChange,
@@ -62,7 +64,7 @@ export function DashboardRenderer({
             </button>
           ))}
         </div>
-        <span className="data-note">샘플 포지션 데이터 · 수동/모의 입력</span>
+        <span className="data-note">{schemaSourceMessage} · 샘플 포지션 데이터</span>
       </section>
 
       {schema.widgets.map((widget) => (
