@@ -38,6 +38,7 @@
 - `docs/product-requirements/`: 제품 의도, 사용자 문제, 성공 기준을 기록한다.
 - `docs/specs/`: 구현 가능한 행동 요구사항과 완료 기준을 기록한다.
 - `docs/specs/frontend-user-flow.md`: 프론트엔드 화면 진입점, 상태 전이, 반응형 흐름을 기록한다.
+- `docs/specs/read-only-market-data-provider.md`: 토스증권을 첫 검증 대상으로 하는 읽기 전용 투자처 API provider 확장 범위와 동작 기준을 기록한다.
 - `docs/ui/`: Dashboard Schema 계약을 보조하는 화면 구조, 컴포넌트 기준, 디자인 시스템, 반응형 규칙을 기록한다.
 - `docs/arch/`: 시스템 구조, 계층 책임, 데이터 흐름, 운영 제약을 기록한다.
 - `docs/arch/backend-architecture-slices.md`: FastAPI 백엔드의 API, 서비스, 모델, 작업 경계를 기록한다.

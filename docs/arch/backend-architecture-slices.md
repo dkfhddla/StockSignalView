@@ -110,6 +110,8 @@ AI Dashboard Request
 - API 라우터는 이 계층을 호출하고, 이 계층이 모델과 저장소를 조합한다.
 - 포트폴리오 계산, 상대수익률 계산, 알림 평가, Dashboard Schema 생성/검증
   같은 동작이 여기에 들어간다.
+- 외부 투자처 데이터 접근은 provider adapter 경계 뒤에 두고, 계산 서비스는
+  정규화된 내부 모델만 사용한다.
 
 ### `backend/app/jobs/`
 
@@ -166,6 +168,15 @@ AI Dashboard Request
 - Dashboard Schema가 `docs/dashboard-schema-v1.md`와
   `docs/widget-registry.md` 계약을 만족하는지 검증한다.
 - 검증 실패 시 렌더링 가능한 결과로 가장하지 않고 명시적 실패를 돌려준다.
+
+### SVC-009 Market Data Providers
+
+- 읽기 전용 투자처 API 연동을 provider adapter 경계 뒤에 둔다.
+- 첫 검증 provider는 토스증권 API로 둘 수 있으나, 서비스 계층은 특정 증권사
+  원본 응답 형식에 직접 의존하지 않는다.
+- provider adapter는 보유 종목, 현재가, KOSPI/KOSDAQ 지수, provider명, 데이터
+  출처, 마지막 갱신 시각, 오류 상태를 공통 내부 모델로 정규화한다.
+- 주문 실행, dry-run 주문, 자동매매는 이 슬라이스의 책임이 아니다.
 
 ## 권장 호출 규칙
 
@@ -250,7 +261,8 @@ AI Dashboard Request
 
 - 뉴스/공시 입력은 별도 서비스 슬라이스로 추가하되 `Trades`, `Portfolio`,
   `Dashboards`의 핵심 경로를 직접 오염시키지 않는다.
-- 브로커 연동은 별도 어댑터 경계 뒤에 둔다.
+- 읽기 전용 market data provider는 별도 어댑터 경계 뒤에 두고, 주문 연동이나
+  자동매매와 분리한다.
 - PostgreSQL 전환 시에도 `api -> services -> models` 경계는 유지한다.
 
 ## 계약 기준
@@ -259,6 +271,7 @@ AI Dashboard Request
 - `docs/specs/mvp-foundation.md`: MVP 계산, 렌더링, 알림 요구사항
 - `docs/specs/stock-signal-view-data-model.md`: 핵심 엔티티와 입력 경계
 - `docs/specs/stock-signal-view-calculation-rules.md`: 계산 세부 규칙
+- `docs/specs/read-only-market-data-provider.md`: 읽기 전용 provider 확장 동작 기준
 - `docs/specs/frontend-user-flow.md`: 화면 흐름과 API 소비 맥락
 - `docs/dashboard-schema-v1.md`: 동적 대시보드 JSON 계약
 - `docs/widget-registry.md`: 허용 위젯과 데이터 요구사항
@@ -272,6 +285,8 @@ AI Dashboard Request
 - [ ] 프론트엔드가 기대하는 상태 값(`PARTIAL`, `UNAVAILABLE`, `TRIGGERED`)이
       백엔드 슬라이스에서 일관되게 생산된다.
 - [ ] 후속 확장(뉴스/공시/브로커)이 MVP 계산 경계를 깨지 않고 추가 가능하다.
+- [ ] 읽기 전용 market data provider가 특정 투자처 응답을 계산 서비스나
+      Dashboard Schema 검증 경계에 누수하지 않는다.
 
 이 문서가 정의한 레이어를 어떤 검증 계층에서 우선 다룰지는
 `docs/guidelines/mvp-verification-strategy.md`를 따른다.
