@@ -12,6 +12,9 @@ const vite = await createServer({
 const { validateDashboardSchema } = await vite.ssrLoadModule(
   "/src/features/dashboard/dashboardSchema.ts",
 );
+const { DashboardSchemaValidationError, fetchDefaultDashboard } = await vite.ssrLoadModule(
+  "/src/lib/dashboardApi.ts",
+);
 
 after(async () => {
   await vite.close();
@@ -201,4 +204,86 @@ test("rejects extra keys outside allowed schema contracts", () => {
   for (const schema of [extraRootKey, extraLayoutKey, extraRequirementKey, extraWidgetKey]) {
     assert.equal(validateDashboardSchema(schema), "INVALID_SCHEMA");
   }
+});
+async function withMockFetch(fetchImplementation, callback) {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = fetchImplementation;
+
+  try {
+    await callback();
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+}
+
+function jsonResponse(body, init = {}) {
+  return new Response(JSON.stringify(body), {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...init.headers,
+    },
+  });
+}
+
+test("fetches and returns a validated default dashboard", async () => {
+  const schema = validSchema();
+
+  await withMockFetch(
+    async () => jsonResponse(schema, { status: 200 }),
+    async () => {
+      assert.deepEqual(await fetchDefaultDashboard(), schema);
+    },
+  );
+});
+
+test("rejects non-OK default dashboard responses", async () => {
+  await withMockFetch(
+    async () => new Response("{}", { status: 500 }),
+    async () => {
+      await assert.rejects(fetchDefaultDashboard, /Default dashboard request failed with 500/);
+    },
+  );
+});
+
+test("rejects default dashboard responses that fail frontend schema validation", async () => {
+  await withMockFetch(
+    async () => jsonResponse({}, { status: 200 }),
+    async () => {
+      await assert.rejects(fetchDefaultDashboard, DashboardSchemaValidationError);
+    },
+  );
+});
+test("rejects malformed default dashboard JSON as schema validation failure", async () => {
+  await withMockFetch(
+    async () => new Response("not json", { headers: { "Content-Type": "application/json" }, status: 200 }),
+    async () => {
+      await assert.rejects(fetchDefaultDashboard, DashboardSchemaValidationError);
+    },
+  );
+});
+
+test("treats OK non-JSON dashboard responses as request failures", async () => {
+  await withMockFetch(
+    async () => new Response("<!doctype html>", { headers: { "Content-Type": "text/html" }, status: 200 }),
+    async () => {
+      await assert.rejects(fetchDefaultDashboard, /Default dashboard response was not JSON/);
+    },
+  );
+});
+
+test("maps backend default dashboard validation errors to schema validation failure", async () => {
+  const errorResponse = {
+    error: {
+      code: "dashboard_schema_validation_failed",
+      message: "The default dashboard schema failed validation.",
+    },
+  };
+
+  await withMockFetch(
+    async () => jsonResponse(errorResponse, { status: 500 }),
+    async () => {
+      await assert.rejects(fetchDefaultDashboard, DashboardSchemaValidationError);
+    },
+  );
 });

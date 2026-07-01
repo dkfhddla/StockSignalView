@@ -3,7 +3,7 @@ import { Holding, holdings } from "./mockPortfolio";
 import { DashboardRenderer } from "./DashboardRenderer";
 import { portfolioOverviewPreset } from "./presetDashboard";
 import type { DashboardSchema } from "./dashboardSchema";
-import { fetchDefaultDashboard } from "../../lib/dashboardApi";
+import { DashboardSchemaValidationError, fetchDefaultDashboard } from "../../lib/dashboardApi";
 
 type FilterKey = "전체" | "보유" | "관심" | "강세" | "약세" | "알림 발생";
 
@@ -28,6 +28,7 @@ export function DashboardPage() {
   const [activeFilter, setActiveFilter] = useState<FilterKey>("전체");
   const [schema, setSchema] = useState<DashboardSchema>(portfolioOverviewPreset);
   const [schemaSourceMessage, setSchemaSourceMessage] = useState("백엔드 대시보드 계약 확인 중");
+  const [schemaLoadFailed, setSchemaLoadFailed] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -36,11 +37,17 @@ export function DashboardPage() {
       .then((defaultDashboard) => {
         setSchema(defaultDashboard);
         setSchemaSourceMessage("백엔드 검증 Dashboard Schema");
+        setSchemaLoadFailed(false);
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
+        if (error instanceof DashboardSchemaValidationError) {
+          setSchemaLoadFailed(true);
+          return;
+        }
         setSchema(portfolioOverviewPreset);
         setSchemaSourceMessage("백엔드 미연결 · 로컬 프리셋 Dashboard Schema");
+        setSchemaLoadFailed(false);
       });
 
     return () => controller.abort();
@@ -54,14 +61,22 @@ export function DashboardPage() {
 
   return (
     <main className="app-shell">
-      <DashboardRenderer
-        activeFilter={activeFilter}
-        onFilterChange={(filter) => setActiveFilter(filter as FilterKey)}
-        positions={visibleHoldings}
-        schemaSourceMessage={schemaSourceMessage}
-        summaryPositions={holdings}
-        schema={schema}
-      />
+      {schemaLoadFailed ? (
+        <section className="renderer-error">
+          <strong>대시보드 스키마를 표시할 수 없습니다.</strong>
+          <p>백엔드 기본 대시보드 응답이 프론트엔드 검증을 통과하지 못했습니다.</p>
+          <p>백엔드 상태와 Dashboard Schema 계약을 확인한 뒤 다시 시도하세요.</p>
+        </section>
+      ) : (
+        <DashboardRenderer
+          activeFilter={activeFilter}
+          onFilterChange={(filter) => setActiveFilter(filter as FilterKey)}
+          positions={visibleHoldings}
+          schemaSourceMessage={schemaSourceMessage}
+          summaryPositions={holdings}
+          schema={schema}
+        />
+      )}
     </main>
   );
 }
