@@ -216,11 +216,21 @@ async function withMockFetch(fetchImplementation, callback) {
   }
 }
 
+function jsonResponse(body, init = {}) {
+  return new Response(JSON.stringify(body), {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...init.headers,
+    },
+  });
+}
+
 test("fetches and returns a validated default dashboard", async () => {
   const schema = validSchema();
 
   await withMockFetch(
-    async () => new Response(JSON.stringify(schema), { status: 200 }),
+    async () => jsonResponse(schema, { status: 200 }),
     async () => {
       assert.deepEqual(await fetchDefaultDashboard(), schema);
     },
@@ -238,7 +248,7 @@ test("rejects non-OK default dashboard responses", async () => {
 
 test("rejects default dashboard responses that fail frontend schema validation", async () => {
   await withMockFetch(
-    async () => new Response(JSON.stringify({}), { status: 200 }),
+    async () => jsonResponse({}, { status: 200 }),
     async () => {
       await assert.rejects(fetchDefaultDashboard, DashboardSchemaValidationError);
     },
@@ -246,9 +256,18 @@ test("rejects default dashboard responses that fail frontend schema validation",
 });
 test("rejects malformed default dashboard JSON as schema validation failure", async () => {
   await withMockFetch(
-    async () => new Response("not json", { status: 200 }),
+    async () => new Response("not json", { headers: { "Content-Type": "application/json" }, status: 200 }),
     async () => {
       await assert.rejects(fetchDefaultDashboard, DashboardSchemaValidationError);
+    },
+  );
+});
+
+test("treats OK non-JSON dashboard responses as request failures", async () => {
+  await withMockFetch(
+    async () => new Response("<!doctype html>", { headers: { "Content-Type": "text/html" }, status: 200 }),
+    async () => {
+      await assert.rejects(fetchDefaultDashboard, /Default dashboard response was not JSON/);
     },
   );
 });
@@ -262,7 +281,7 @@ test("maps backend default dashboard validation errors to schema validation fail
   };
 
   await withMockFetch(
-    async () => new Response(JSON.stringify(errorResponse), { status: 500 }),
+    async () => jsonResponse(errorResponse, { status: 500 }),
     async () => {
       await assert.rejects(fetchDefaultDashboard, DashboardSchemaValidationError);
     },

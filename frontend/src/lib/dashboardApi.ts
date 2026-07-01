@@ -39,6 +39,14 @@ export async function fetchDefaultDashboard(signal?: AbortSignal): Promise<Dashb
 }
 
 async function readDashboardResponse(response: Response): Promise<unknown> {
+  if (!hasJsonContentType(response)) {
+    if (response.ok) {
+      throw new Error("Default dashboard response was not JSON");
+    }
+
+    return null;
+  }
+
   try {
     return await response.json();
   } catch {
@@ -53,6 +61,10 @@ async function readDashboardResponse(response: Response): Promise<unknown> {
 function isDashboardSchemaValidationErrorResponse(value: unknown) {
   if (!isRecord(value) || !isRecord(value.error)) return false;
   return value.error.code === DASHBOARD_SCHEMA_VALIDATION_FAILED;
+}
+
+function hasJsonContentType(response: Response) {
+  return response.headers.get("content-type")?.toLowerCase().includes("application/json") ?? false;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
