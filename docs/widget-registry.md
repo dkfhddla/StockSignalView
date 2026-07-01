@@ -13,6 +13,12 @@ Widget Registry는 Dashboard Schema v1에서 사용할 수 있는 위젯 타입�
 
 ## MVP 위젯
 
+구현 상태:
+
+- 현재 프론트엔드 렌더러 구현: `position_summary`, `position_table`, `position_cards`.
+- 현재 백엔드 스키마 검증 대상: 아래 MVP 위젯 전체.
+- `relative_return_chart`, `decision_timeline`, `alert_status_list`는 Dashboard Schema v1에는 등록되어 있지만 시각 렌더링은 후속 구현 범위다.
+
 ### `position_summary`
 
 보유 종목 전체의 핵심 지표를 요약한다.
