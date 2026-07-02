@@ -44,6 +44,8 @@ provider는 사용자의 보유 종목 목록을 조회하고, 종목 코드, �
 
 provider가 보유 종목 목록을 제공하지 못하면 시스템은 권한 없음, 인증 실패, provider 미지원, 일시 오류 중 하나로 구분 가능한 상태를 반환해야 한다.
 
+보유 기간 상대성과를 계산하려면 현재 보유 기간의 첫 매수일, 첫 매수 기준가 또는 거래 원장에서 이를 재계산할 수 있는 입력, 그리고 같은 기준일의 시장 지수가 필요하다. provider 또는 내부 거래 원장이 이 기준 입력을 제공하지 못하면 보유 기간 상대성과는 임의로 추정하지 않고 `UNAVAILABLE` 또는 `미산출` 상태로 반환해야 한다.
+
 ### RMP-003 현재가 조회
 
 provider는 보유 또는 관심 종목의 현재가를 조회할 수 있어야 한다.
@@ -61,6 +63,8 @@ KOSPI 종목은 KOSPI 지수, KOSDAQ 종목은 KOSDAQ 지수를 기본 비교 �
 정규화된 provider 데이터는 `docs/specs/stock-signal-view-calculation-rules.md`의 계산 규칙을 따른다.
 
 당일 상대성과는 종목 당일 수익률에서 같은 시장의 당일 지수 수익률을 뺀 값이다. 보유 기간 상대성과는 보유 기간 종목 수익률에서 같은 기간의 시장 수익률을 뺀 값이다.
+
+보유 기간 상대성과는 현재 보유 기간의 첫 매수일/기준가와 해당 기준일 시장 지수를 확보한 경우에만 계산한다. 기준 입력이 없으면 계산 서비스는 provider 현재가만으로 기간 기준값을 만들지 않고 `UNAVAILABLE` 또는 `미산출` 상태를 전달한다.
 
 ### RMP-006 Dashboard Schema 및 렌더링 경계
 
@@ -108,8 +112,9 @@ provider 인증이 실패하면 시스템은 사용자 API 자격 증명이나 �
 
 - [ ] 토스증권 API는 첫 read-only provider 검증 대상으로 문서화되어 있다.
 - [ ] provider adapter는 보유 종목, 현재가, KOSPI/KOSDAQ 지수를 공통 내부 모델로 정규화한다.
-- [ ] provider 결과는 provider명, 데이터 출처, 마지막 갱신 시각을 포함할 수 있다.
+- [ ] provider 결과는 provider명, 데이터 출처, 가격 기준 시각, 마지막 갱신 시각을 필수 메타데이터로 포함한다.
 - [ ] 인증 실패, 권한 없음, provider 오류, 데이터 지연 상태가 계산 결과와 대시보드에 전달된다.
+- [ ] 보유 기간 상대성과 기준 입력(첫 매수일, 첫 매수 기준가 또는 거래 원장, 기준일 시장 지수)이 없으면 해당 지표는 계산되지 않고 `UNAVAILABLE` 또는 `미산출` 상태가 된다.
 - [ ] 당일 상대성과와 보유 기간 상대성과는 `docs/specs/stock-signal-view-calculation-rules.md`의 산식을 따른다.
 - [ ] 대시보드는 출처와 갱신 시각을 숨기지 않는다.
 - [ ] 주문 실행, dry-run 주문, 자동매매는 구현되지 않는다.
@@ -119,7 +124,8 @@ provider 인증이 실패하면 시스템은 사용자 API 자격 증명이나 �
 
 - `backend/tests`: fake provider로 보유 종목, 현재가, KOSPI/KOSDAQ 지수 정규화 테스트를 추가한다.
 - `backend/tests`: 인증 실패, 권한 없음, 데이터 지연, provider 오류 상태가 안전하게 전파되는지 검증한다.
-- `backend/tests`: provider 데이터로 당일 및 보유 기간 상대성과가 계산 규칙과 일치하는지 검증한다.
+- `backend/tests`: provider 데이터와 거래 원장 또는 기준 입력으로 당일 및 보유 기간 상대성과가 계산 규칙과 일치하는지 검증한다.
+- `backend/tests`: 보유 기간 상대성과 기준 입력이 없을 때 provider 현재가만으로 값을 추정하지 않고 `UNAVAILABLE` 또는 `미산출` 상태를 반환하는지 검증한다.
 - `frontend`: provider명, 마지막 갱신 시각, stale/error/unauthorized 상태가 표시되는지 검증한다.
 - `frontend`: 유효하지 않은 Dashboard Schema 또는 출처 없는 AI 요약이 렌더링되지 않는지 검증한다.
 - 문서 리뷰: 기존 외부 API 없는 MVP 범위와 read-only provider 확장 범위가 충돌하지 않는지 확인한다.
