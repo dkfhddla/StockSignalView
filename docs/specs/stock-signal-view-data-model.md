@@ -27,6 +27,8 @@ MVP는 수동 입력 기반으로 동작하되, 향후 증권사 API, 시세 API
 - 거래 입력: 종목, 거래 유형, 수량, 체결가, 거래 일시, 매수/매도 사유, 거래 메모, 수수료, 세금
 - 가격 입력: 종목, 가격, 가격 기준 시각
 - 시장 지수 입력: 시장 구분, 지수 값, 지수 기준 시각
+- provider 보유 현황 입력: 종목, 보유 수량, 평균 매수가 또는 provider가 제공한
+  원가 근거, 기준 시각, provider명
 - 알림 조건 입력: 종목, 알림 유형, 임계값, 활성 여부
 
 MVP에서는 수수료와 세금을 선택 입력으로 둘 수 있으며, 입력하지 않으면 기본값 `0`으로 처리할 수 있다.
@@ -135,6 +137,32 @@ KOSPI/KOSDAQ 같은 시장 지수의 특정 시점 입력값이다.
 - 기준일 지수 또는 현재 지수가 없으면 시장 수익률과 상대수익률은 `미산출` 상태로 표시한다.
 - MVP에서는 실시간 지수를 필수로 자동 조회하지 않는다.
 
+### ProviderHoldingSnapshot
+
+읽기 전용 provider가 특정 시점에 알려준 사용자의 보유 종목 상태다.
+
+필드 초안:
+
+- `id`: 내부 식별자
+- `provider`: provider명
+- `external_account_id`: provider 계좌 또는 계정 식별자
+- `stock_id`: 종목 식별자
+- `held_quantity`: provider가 반환한 보유 수량
+- `average_cost`: provider가 반환한 평균 매수가
+- `cost_basis_source`: 평균 매수가 또는 원가 근거의 출처 (`PROVIDER_REPORTED`, `TRADE_LEDGER_DERIVED`, `UNKNOWN`)
+- `captured_at`: 보유 현황 기준 시각
+- `refreshed_at`: provider에서 데이터를 가져온 마지막 갱신 시각
+- `source`: 입력 출처 (`BROKER_API`, `IMPORT`, `MOCK`)
+- `created_at`: 등록 시각
+
+규칙:
+
+- `ProviderHoldingSnapshot`은 provider가 알려준 현재 보유 상태이며, 개별 매수/매도 거래 원장을 대체하지 않는다.
+- provider가 체결 내역을 제공하지 않고 보유 수량과 평균 매수가만 제공하면 시스템은 이를 `Trade`로 변환해 저장하지 않는다.
+- 거래별 판단 사유, 수수료, 세금, 체결 시각이 필요한 기능은 `Trade` 원장이 있을 때만 계산하거나 표시한다.
+- `PortfolioPosition`은 내부 `Trade` 원장과 provider 보유 현황을 같은 화면에 사용할 수 있지만, 어떤 입력에서 계산되었는지와 계산 상태를 구분해야 한다.
+- provider 보유 현황과 내부 거래 원장이 같은 종목에 대해 충돌하면 자동 병합하지 않고 후속 동기화 정책 또는 사용자 확인 대상으로 둔다.
+
 ### AlertRule
 
 사용자가 종목별로 설정하는 기본 알림 조건이다.
@@ -200,8 +228,12 @@ KOSPI/KOSDAQ 같은 시장 지수의 특정 시점 입력값이다.
 규칙:
 
 - `PortfolioPosition`은 저장 원장이 아니라 거래, 가격, 지수 입력에서 재계산되는 파생 결과로 본다.
+- provider 보유 현황만 있는 종목의 `PortfolioPosition`은 `ProviderHoldingSnapshot`,
+  `PriceSnapshot`, `MarketIndexSnapshot`에서 산출될 수 있다. 이 경우 실현손익,
+  거래 타임라인, 거래 메모 기반 판단 회고처럼 거래 원장이 필요한 값은
+  `UNAVAILABLE` 또는 `미산출`로 둔다.
 - 테이블/카드 위젯이 별도 종목 조인 없이 표시 가능하도록 종목명과 시장 구분을 포함할 수 있다.
-- 성능 문제 또는 화면 응답성을 위해 캐시할 수는 있지만, 원본 데이터의 소유자는 `Trade`, `PriceSnapshot`, `MarketIndexSnapshot`이다.
+- 성능 문제 또는 화면 응답성을 위해 캐시할 수는 있지만, 원본 데이터의 소유자는 `Trade`, `ProviderHoldingSnapshot`, `PriceSnapshot`, `MarketIndexSnapshot`이다.
 - 계산 상태가 `PARTIAL` 또는 `UNAVAILABLE`이면 대시보드에는 누락된 입력을 사용자가 이해할 수 있게 표시해야 한다.
 
 ## 계산 기준
@@ -260,6 +292,7 @@ AI Dashboard Planner는 이 데이터를 직접 변경하지 않는다. Planner�
 향후 외부 API는 기존 모델을 대체하지 않고 입력 소스로만 추가한다.
 
 - 증권사 체결 내역 API: `Trade` 생성 또는 갱신
+- 읽기 전용 보유 종목 API: `ProviderHoldingSnapshot` 생성 또는 갱신
 - 시세 API: `PriceSnapshot` 생성
 - 시장 지수 API: `MarketIndexSnapshot` 생성
 - 뉴스/공시 API: MVP 이후 별도 도메인 모델로 분리
