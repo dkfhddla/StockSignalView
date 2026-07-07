@@ -26,7 +26,8 @@ Database (SQLite -> PostgreSQL)
 Future Extension Services
  ├─ News
  ├─ Disclosures
- └─ BrokerAdapter
+ ├─ ReadOnlyMarketDataProvider
+ └─ BrokerOrderAdapter
 ```
 
 ## 계층별 책임
@@ -55,7 +56,8 @@ Future Extension Services
 - `Dashboard Presets`: AI API 없이도 기본 대시보드를 생성할 수 있는 고정 스키마를 제공한다.
 - `News`: 후속 뉴스 수집과 저장 책임을 맡는다.
 - `Disclosures`: 후속 공시 수집과 분류 책임을 맡는다.
-- `BrokerAdapter`: 후속 증권사 연동을 어댑터 경계 뒤에 둔다.
+- `ReadOnlyMarketDataProvider`: 후속 투자처 API에서 보유 종목, 현재가, KOSPI/KOSDAQ 지수를 읽기 전용으로 조회해 provider adapter 경계 뒤에서 정규화한다.
+- `BrokerOrderAdapter`: 후속 주문 또는 dry-run 주문 연동을 어댑터 경계 뒤에 둔다. 읽기 전용 시장 데이터 조회와 주문 실행 경계는 분리한다.
 
 ### Database
 
@@ -99,6 +101,7 @@ Future Extension Services
 ## 보안과 운영 제약
 
 - API Key는 `.env`에서 관리하고 저장소에 커밋하지 않는다.
+- 읽기 전용 market data provider 자격 증명은 서버 측 보안 경계에서 다루며 프론트엔드에 노출하지 않는다.
 - 증권사 주문 기능은 기본값을 `dry_run=true`로 둔다.
 - 실제 주문은 명시적 활성화 전까지 금지한다.
 - 주문 시도, 알림 발송, 외부 데이터 수집은 로그 대상이다.
@@ -107,7 +110,7 @@ Future Extension Services
 
 ## MVP와 후속 확장
 
-MVP는 종목 관리, 거래 기록, 포트폴리오 계산, 상대수익률 계산, Dashboard Schema v1, 기본 위젯 레지스트리, 동적 렌더러, 기본 알림에 집중한다. 뉴스, 공시, 실시간 시세, 브로커 연동은 같은 경계 안에서 후속 단계로 추가한다.
+MVP는 종목 관리, 거래 기록, 포트폴리오 계산, 상대수익률 계산, Dashboard Schema v1, 기본 위젯 레지스트리, 동적 렌더러, 기본 알림에 집중한다. 뉴스, 공시, 실시간/준실시간 시장 데이터 provider, 브로커 주문 연동은 후속 단계로 추가하되, 읽기 전용 market data provider와 주문 실행 adapter는 같은 경계로 합치지 않는다.
 
 구현 단계의 백엔드 레이어 책임 분리는 `docs/arch/backend-architecture-slices.md`
 를 따른다.

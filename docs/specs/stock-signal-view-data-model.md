@@ -107,7 +107,12 @@ MVP에서는 수수료와 세금을 선택 입력으로 둘 수 있으며, 입�
 - `id`: 내부 식별자
 - `stock_id`: 종목 식별자
 - `price`: 가격
-- `captured_at`: 가격 기준 시각
+- `provider`: 가격을 제공한 provider 또는 내부 입력 주체
+- `provider_source_id`: provider 내부의 시세 소스 또는 연동 식별자
+- `captured_at`: 가격 값의 기준 시각(value basis timestamp)
+- `refreshed_at`: provider 또는 내부 입력에서 스냅샷을 마지막으로 갱신한 시각
+- `data_status`: 데이터 상태 (`AVAILABLE`, `STALE`, `UNAVAILABLE`)
+- `snapshot_role`: 스냅샷 역할 (`CURRENT`, `DAY_BASELINE`, `HOLDING_PERIOD_BASELINE`)
 - `source`: 입력 출처 (`MANUAL`, `MARKET_API`, `MOCK`)
 - `created_at`: 등록 시각
 
@@ -115,8 +120,11 @@ MVP에서는 수수료와 세금을 선택 입력으로 둘 수 있으며, 입�
 
 - MVP는 사용자가 현재가를 직접 입력하거나 모의 가격을 사용할 수 있다.
 - 한 종목에 여러 가격 스냅샷을 저장할 수 있다.
-- 대시보드는 기본적으로 가장 최근 가격 스냅샷을 평가금액 계산에 사용한다.
-- 가격이 없으면 평가금액, 평가손익, 종목 수익률은 `미산출` 상태가 될 수 있다.
+- 대시보드는 기본적으로 `snapshot_role`이 `CURRENT`이고 `data_status`가 `AVAILABLE`인 가장 최근 가격 스냅샷을 평가금액 계산에 사용한다.
+- `DAY_BASELINE`은 특정 영업일 기준가, `HOLDING_PERIOD_BASELINE`은 보유 기간 시작 기준가처럼 수익률 기준값을 분리해 보존한다.
+- provider 연동 가격은 값을 산출한 기준 시각(`captured_at`)과 시스템이 값을 가져온 시각(`refreshed_at`)을 구분해 저장한다.
+- `data_status`가 `STALE`인 가격은 화면에 지연 상태로 표시한다. 계산 서비스는 사용자나 정책이 허용한 지연 허용 범위 안에서만 이를 사용할 수 있으며, 허용 범위를 벗어나면 해당 지표를 `UNAVAILABLE` 또는 `미산출`로 처리한다.
+- 가격이 없거나 `data_status`가 `UNAVAILABLE`이면 평가금액, 평가손익, 종목 수익률은 `미산출` 상태가 될 수 있다.
 
 ### MarketIndexSnapshot
 
@@ -127,14 +135,22 @@ KOSPI/KOSDAQ 같은 시장 지수의 특정 시점 입력값이다.
 - `id`: 내부 식별자
 - `market`: 시장 구분 (`KOSPI`, `KOSDAQ`)
 - `index_value`: 지수 값
-- `captured_at`: 지수 기준 시각
+- `provider`: 지수를 제공한 provider 또는 내부 입력 주체
+- `provider_source_id`: provider 내부의 지수 소스 또는 연동 식별자
+- `captured_at`: 지수 값의 기준 시각(value basis timestamp)
+- `refreshed_at`: provider 또는 내부 입력에서 스냅샷을 마지막으로 갱신한 시각
+- `data_status`: 데이터 상태 (`AVAILABLE`, `STALE`, `UNAVAILABLE`)
+- `snapshot_role`: 스냅샷 역할 (`CURRENT`, `DAY_BASELINE`, `HOLDING_PERIOD_BASELINE`)
 - `source`: 입력 출처 (`MANUAL`, `MARKET_API`, `MOCK`)
 - `created_at`: 등록 시각
 
 규칙:
 
 - KOSPI 종목은 KOSPI 지수, KOSDAQ 종목은 KOSDAQ 지수를 기본 비교 대상으로 사용한다.
-- 기준일 지수 또는 현재 지수가 없으면 시장 수익률과 상대수익률은 `미산출` 상태로 표시한다.
+- 시장 수익률 계산은 `CURRENT` 지수와 기준 역할(`DAY_BASELINE` 또는 `HOLDING_PERIOD_BASELINE`) 지수를 명시적으로 구분해 사용한다.
+- `data_status`가 `STALE`인 지수는 화면에 지연 상태로 표시한다. 계산 서비스는 사용자나 정책이 허용한 지연 허용 범위 안에서만 이를 사용할 수 있으며, 허용 범위를 벗어나면 시장 수익률과 상대수익률을 `UNAVAILABLE` 또는 `미산출`로 처리한다.
+- 기준일 지수 또는 현재 지수가 없거나 `data_status`가 `UNAVAILABLE`이면 시장 수익률과 상대수익률은 `미산출` 상태로 표시한다.
+- provider 연동 지수는 값을 산출한 기준 시각(`captured_at`)과 시스템이 값을 가져온 시각(`refreshed_at`)을 구분해 저장한다.
 - MVP에서는 실시간 지수를 필수로 자동 조회하지 않는다.
 
 ### ProviderHoldingSnapshot
@@ -146,7 +162,11 @@ KOSPI/KOSDAQ 같은 시장 지수의 특정 시점 입력값이다.
 - `id`: 내부 식별자
 - `provider`: provider명
 - `external_account_id`: provider 계좌 또는 계정 식별자
-- `stock_id`: 종목 식별자
+- `provider_account_name`: provider가 반환한 계좌 또는 계정 표시명
+- `raw_provider_symbol`: provider가 반환한 원본 종목 코드 또는 심볼
+- `raw_provider_name`: provider가 반환한 원본 종목명
+- `raw_market`: provider가 반환한 원본 시장 구분
+- `stock_id`: 매핑된 내부 종목 식별자. 매핑되지 않은 provider-only 보유 현황이면 비울 수 있다.
 - `held_quantity`: provider가 반환한 보유 수량
 - `average_cost`: provider가 반환한 평균 매수가
 - `cost_basis_source`: 평균 매수가 또는 원가 근거의 출처 (`PROVIDER_REPORTED`, `TRADE_LEDGER_DERIVED`, `UNKNOWN`)
@@ -159,6 +179,10 @@ KOSPI/KOSDAQ 같은 시장 지수의 특정 시점 입력값이다.
 
 - `ProviderHoldingSnapshot`은 provider가 알려준 현재 보유 상태이며, 개별 매수/매도 거래 원장을 대체하지 않는다.
 - provider가 체결 내역을 제공하지 않고 보유 수량과 평균 매수가만 제공하면 시스템은 이를 `Trade`로 변환해 저장하지 않는다.
+- adapter는 정책상 허용될 때 `raw_provider_symbol`, `raw_provider_name`, `raw_market`을 사용해 `Stock`을 매핑하거나 upsert할 수 있다.
+- adapter가 `Stock`을 매핑하거나 upsert할 수 없으면 `stock_id`를 비워 provider-only 보유 현황을 unmapped 상태로 보존한다.
+- 로컬 `Stock`이 없다는 이유만으로 provider-only 보유 현황을 drop하지 않는다.
+- unmapped 보유 현황은 내부 종목 조인이 필요한 계산과 대시보드 표시에 사용할 수 없으며 해당 값은 `UNAVAILABLE` 또는 `미산출` 상태로 표시한다.
 - 거래별 판단 사유, 수수료, 세금, 체결 시각이 필요한 기능은 `Trade` 원장이 있을 때만 계산하거나 표시한다.
 - `PortfolioPosition`은 내부 `Trade` 원장과 provider 보유 현황을 같은 화면에 사용할 수 있지만, 어떤 입력에서 계산되었는지와 계산 상태를 구분해야 한다.
 - provider 보유 현황과 내부 거래 원장이 같은 종목에 대해 충돌하면 자동 병합하지 않고 후속 동기화 정책 또는 사용자 확인 대상으로 둔다.
@@ -219,9 +243,16 @@ KOSPI/KOSDAQ 같은 시장 지수의 특정 시점 입력값이다.
 - `unrealized_profit_loss`: 평가손익
 - `realized_profit_loss`: 실현손익
 - `position_weight`: 포트폴리오 비중
-- `stock_return_rate`: 종목 수익률
-- `market_return_rate`: 시장 수익률
-- `relative_return_rate`: 상대수익률
+- `average_cost_current_return_rate`: 평균단가 기준 현재 수익률
+- `daily_stock_return_rate`: 당일 종목 수익률
+- `daily_market_return_rate`: 당일 시장 수익률
+- `daily_relative_return_rate`: 당일 상대수익률
+- `holding_period_stock_return_rate`: 보유기간 종목 수익률
+- `holding_period_market_return_rate`: 보유기간 시장 수익률
+- `holding_period_relative_return_rate`: 보유기간 상대수익률
+- `stock_return_rate`: 보유기간 종목 수익률. 기존 Dashboard Schema 호환 필드이며 기본 의미는 `holding_period_stock_return_rate`와 같다.
+- `market_return_rate`: 보유기간 시장 수익률. 기존 Dashboard Schema 호환 필드이며 기본 의미는 `holding_period_market_return_rate`와 같다.
+- `relative_return_rate`: 보유기간 상대수익률. 기존 Dashboard Schema 호환 필드이며 기본 의미는 `holding_period_relative_return_rate`와 같다.
 - `strength_status`: 강/약세 상태
 - `calculation_status`: 계산 상태 (`CALCULATED`, `PARTIAL`, `UNAVAILABLE`)
 
@@ -232,6 +263,11 @@ KOSPI/KOSDAQ 같은 시장 지수의 특정 시점 입력값이다.
   `PriceSnapshot`, `MarketIndexSnapshot`에서 산출될 수 있다. 이 경우 실현손익,
   거래 타임라인, 거래 메모 기반 판단 회고처럼 거래 원장이 필요한 값은
   `UNAVAILABLE` 또는 `미산출`로 둔다.
+- provider-only 보유 현황에 `average_cost`와 현재가가 있으면 `average_cost_current_return_rate`는 표시할 수 있다. 그러나 첫 매수일, 보유기간 기준 종목 가격, 보유기간 기준 시장 지수 중 필요한 기준값이 없으면 `holding_period_relative_return_rate`와 호환 필드 `relative_return_rate`는 `UNAVAILABLE` 또는 `미산출` 상태로 둔다.
+- `daily_stock_return_rate`, `daily_market_return_rate`, `daily_relative_return_rate`는 당일 기준 가격과 당일 기준 시장 지수로 계산하는 당일 triplet이다. `holding_period_stock_return_rate`, `holding_period_market_return_rate`, `holding_period_relative_return_rate`는 현재 보유 기간 시작 기준값으로 계산하는 보유기간 triplet이다.
+- 당일 상대수익률과 보유기간 상대수익률은 서로 다른 필드에 보존한다. `daily_relative_return_rate`가 `holding_period_relative_return_rate` 또는 `relative_return_rate`를 overwrite해서는 안 되며, 보유기간 상대수익률도 당일 상대수익률을 overwrite해서는 안 된다.
+- provider spec은 평균단가 기준 현재 수익률을 `average_cost_current_return_rate`, 당일 상대수익률을 `daily_relative_return_rate`, 보유기간 상대수익률을 `holding_period_relative_return_rate` 또는 기존 호환 필드 `relative_return_rate`로 참조해야 한다.
+- `daily_*`, `holding_period_*`, `average_cost_current_return_rate`는 데이터 모델과 후속 provider 확장 계약의 내부 계산 필드다. 이를 Dashboard Schema나 Widget Registry에 표시 필드로 노출하려면 해당 계약과 백엔드/프론트엔드 validator를 별도로 확장해야 한다.
 - 테이블/카드 위젯이 별도 종목 조인 없이 표시 가능하도록 종목명과 시장 구분을 포함할 수 있다.
 - 성능 문제 또는 화면 응답성을 위해 캐시할 수는 있지만, 원본 데이터의 소유자는 `Trade`, `ProviderHoldingSnapshot`, `PriceSnapshot`, `MarketIndexSnapshot`이다.
 - 계산 상태가 `PARTIAL` 또는 `UNAVAILABLE`이면 대시보드에는 누락된 입력을 사용자가 이해할 수 있게 표시해야 한다.
@@ -263,9 +299,13 @@ MVP 기본안:
 ### 상대수익률
 
 ```text
-종목 수익률 = (현재가 - 기준일 종목 기준가) / 기준일 종목 기준가 * 100
-시장 수익률 = (현재 시장 지수 - 기준일 시장 지수) / 기준일 시장 지수 * 100
-상대수익률 = 종목 수익률 - 시장 수익률
+평균단가 기준 현재 수익률 = (현재가 - 평균 매수가) / 평균 매수가 * 100
+보유기간 종목 수익률 = (현재가 - 기준일 종목 기준가) / 기준일 종목 기준가 * 100
+보유기간 시장 수익률 = (현재 시장 지수 - 기준일 시장 지수) / 기준일 시장 지수 * 100
+보유기간 상대수익률 = 보유기간 종목 수익률 - 보유기간 시장 수익률
+당일 종목 수익률 = (현재가 - 당일 기준 종목 가격) / 당일 기준 종목 가격 * 100
+당일 시장 수익률 = (현재 시장 지수 - 당일 기준 시장 지수) / 당일 기준 시장 지수 * 100
+당일 상대수익률 = 당일 종목 수익률 - 당일 시장 수익률
 ```
 
 기본값:
@@ -273,6 +313,8 @@ MVP 기본안:
 - 평가 시작일은 현재 보유 기간의 첫 매수일이다.
 - 기준일 종목 기준가는 현재 보유 기간의 첫 매수 체결가다.
 - 기준일 시장 지수는 현재 보유 기간의 첫 매수일에 대응하는 시장 지수다.
+- 기존 `stock_return_rate`, `market_return_rate`, `relative_return_rate`의 기본 의미는 각각 보유기간 종목 수익률, 보유기간 시장 수익률, 보유기간 상대수익률이다.
+- 평균단가 기준 현재 수익률, 당일 triplet, 보유기간 triplet은 서로 다른 계산 기준을 가진다. 계산 서비스와 provider adapter는 한 기준의 결과로 다른 기준의 필드를 덮어쓰지 않는다.
 
 ## Dashboard Schema 입력 경계
 
@@ -284,6 +326,8 @@ Dashboard Schema는 원본 데이터를 저장하는 모델이 아니라 화면 
 - `MarketIndexSnapshot`: 시장 수익률과 상대수익률 계산 입력.
 - `AlertRule`, `AlertEvent`: 알림 상태 위젯 입력.
 - `PortfolioPosition`: 대시보드 위젯의 주요 계산 결과.
+
+Dashboard Schema v1과 Widget Registry가 아직 허용하지 않는 `PortfolioPosition` 내부 필드는 Planner가 곧바로 위젯 column이나 option으로 emit하면 안 된다. 해당 필드를 화면에 노출하려면 `docs/dashboard-schema-v1.md`, `docs/widget-registry.md`, 백엔드/프론트엔드 validator를 같은 계약으로 확장한 뒤 사용한다.
 
 AI Dashboard Planner는 이 데이터를 직접 변경하지 않는다. Planner는 데이터 요구사항과 위젯 구성을 제안하고, 렌더러는 검증된 Dashboard Schema만 표시한다.
 
