@@ -53,6 +53,7 @@ provider 또는 내부 입력 경로가 값을 조회하거나 정규화할 때�
 허용 상태:
 
 - `AVAILABLE`: 값을 사용할 수 있음
+- `PARTIAL`: 일부 대상 또는 일부 필드만 사용할 수 있음
 - `STALE`: 값은 있으나 지연 또는 신선도 정책 확인이 필요함
 - `UNAVAILABLE`: 값이 없어 계산에 사용할 수 없음
 - `UNAUTHORIZED`: 인증 실패 또는 만료로 조회할 수 없음
@@ -62,7 +63,7 @@ provider 또는 내부 입력 경로가 값을 조회하거나 정규화할 때�
 
 규칙:
 
-- `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED`를 단순 `UNAVAILABLE`로 접어 저장하면 안 된다.
+- `PARTIAL`, `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED`를 단순 `UNAVAILABLE`로 접어 저장하면 안 된다.
 - 대시보드와 테스트가 사용자 조치가 필요한 인증/권한 문제와 일시적 provider 오류를 구분할 수 있어야 한다.
 - `PriceSnapshot.data_status`와 `MarketIndexSnapshot.data_status`는 스냅샷 값의 사용 가능 상태를 나타낸다. 조회 자체의 실패 원인과 대상별 상태 묶음은 `ProviderLookupResult`로 전달한다.
 
@@ -234,7 +235,7 @@ provider 조회 또는 내부 provider-normalization 단계의 상태 envelope�
 규칙:
 
 - 보유 목록, 가격, 지수 조회가 실패해 owner snapshot을 만들 수 없어도 `ProviderLookupResult`는 실패 원인을 보존해야 한다.
-- 보유 조회의 `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `STALE` 상태는 `ProviderHoldingSnapshot`에 임의 필드를 추가하지 않고 `ProviderLookupResult` 또는 파생 `PortfolioPosition.calculation_status`로 전달한다.
+- 보유 조회의 `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED`, `PARTIAL`, `STALE` 상태는 `ProviderHoldingSnapshot`에 임의 필드를 추가하지 않고 반드시 `ProviderLookupResult.lookup_status`로 전달한다. `PortfolioPosition.calculation_status`는 계산 가능 여부만 나타내며 provider 실패 원인의 저장 위치가 아니다.
 - 가격/지수 조회의 인증 실패와 provider 오류는 `PriceSnapshot.data_status` 또는 `MarketIndexSnapshot.data_status`만으로 표현하지 않고 `ProviderLookupResult.lookup_status`에 보존한다.
 - snapshot이 생성된 경우에도 stale 또는 partial 상태가 있으면 snapshot의 `data_status`와 조회 envelope의 `lookup_status`를 함께 전달할 수 있다.
 
@@ -286,6 +287,12 @@ provider 조회 또는 내부 provider-normalization 단계의 상태 envelope�
 필드 초안:
 
 - `stock_id`: 종목 식별자
+- `position_key`: 화면 행, 계산 결과, provider-only 가격 연결에 사용할 포지션 식별자. 내부 종목이면 `stock_id`를 기준으로 만들고, provider-only unmapped 보유 현황이면 provider 계좌와 원본 심볼/시장 조합으로 만든다.
+- `provider`: provider-only 보유 현황에서 온 경우의 provider명
+- `external_account_id`: provider-only 보유 현황에서 온 경우의 계좌 식별자
+- `raw_provider_symbol`: provider-only 보유 현황에서 온 경우의 원본 종목 코드 또는 심볼
+- `raw_provider_name`: provider-only 보유 현황에서 온 경우의 원본 종목명
+- `raw_market`: provider-only 보유 현황에서 온 경우의 원본 시장 구분
 - `stock_name`: 종목명
 - `market`: 시장 구분
 - `held_quantity`: 보유 수량
@@ -314,6 +321,8 @@ provider 조회 또는 내부 provider-normalization 단계의 상태 envelope�
   `PriceSnapshot`, `MarketIndexSnapshot`, `ProviderLookupResult`에서 산출될 수 있다. 이 경우 실현손익,
   거래 타임라인, 거래 메모 기반 판단 회고처럼 거래 원장이 필요한 값은
   `UNAVAILABLE` 또는 `미산출`로 둔다.
+- provider-only unmapped `PortfolioPosition`은 `stock_id`가 비어 있어도 `position_key`, `provider`, `external_account_id`, `raw_provider_symbol`, `raw_market`으로 행 식별과 provider-only `PriceSnapshot` 연결을 유지해야 한다. 구현체가 이 식별자를 보존할 수 없으면 provider-only 보유 현황에서 `PortfolioPosition`을 만들지 않고 `ProviderLookupResult`의 상태만 전달한다.
+- provider-only unmapped `PortfolioPosition`의 `stock_name`과 `market`은 화면 표시를 위해 `raw_provider_name`, `raw_market`에서 가져올 수 있지만, 이는 내부 `Stock` 매핑이나 upsert를 의미하지 않는다.
 - provider-only 보유 현황에 양수 `average_cost`, 양수 보유 수량, 현재가가 있으면 `average_cost_current_return_rate`는 표시할 수 있다. 그러나 첫 매수일, 보유기간 기준 종목 가격, 보유기간 기준 시장 지수 중 필요한 기준값이 없으면 `holding_period_relative_return_rate`와 호환 필드 `relative_return_rate`는 `UNAVAILABLE` 또는 `미산출` 상태로 둔다.
 - `daily_stock_return_rate`, `daily_market_return_rate`, `daily_relative_return_rate`는 당일 기준 가격과 당일 기준 시장 지수로 계산하는 당일 triplet이다. `holding_period_stock_return_rate`, `holding_period_market_return_rate`, `holding_period_relative_return_rate`는 현재 보유 기간 시작 기준값으로 계산하는 보유기간 triplet이다.
 - 당일 상대수익률과 보유기간 상대수익률은 서로 다른 필드에 보존한다. `daily_relative_return_rate`가 `holding_period_relative_return_rate` 또는 `relative_return_rate`를 overwrite해서는 안 되며, 보유기간 상대수익률도 당일 상대수익률을 overwrite해서는 안 된다.

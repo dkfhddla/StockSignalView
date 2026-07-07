@@ -46,7 +46,7 @@ provider는 사용자의 보유 종목 목록을 조회하고, 종목 코드, �
 
 정규화 결과는 provider 원본 응답을 화면이나 계산 서비스에 직접 넘기지 않고 `ProviderHoldingSnapshot`의 owner 용어를 사용해야 한다. 최소한 `provider`, `external_account_id`, `provider_account_name`, `raw_provider_symbol`, `raw_provider_name`, `raw_market`, `held_quantity`, `average_cost`, `cost_basis_source`, `captured_at`, `refreshed_at`를 보존하고, 내부 `Stock`으로 매핑된 경우에만 `stock_id`를 채운다. provider 원본 종목을 매핑할 수 없으면 provider-only 보유 현황으로 보존한다. 로컬 `Stock`이 없다는 이유만으로 보유 현황을 drop하거나 임의 종목으로 합치면 안 된다. 보유 조회의 인증 실패, 권한 없음, provider 오류, 데이터 지연 같은 상태는 `ProviderHoldingSnapshot` 필드로 위조하지 않고 조회 결과 또는 계산 상태로 함께 전달한다.
 
-보유 조회 자체의 상태는 `ProviderHoldingSnapshot`에 임의 필드로 넣지 않고 `ProviderLookupResult`의 `lookup_status`로 전달해야 한다. `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED`, `STALE`, `UNAVAILABLE`은 서로 구분되어야 하며, 대시보드 입력과 테스트는 이 상태를 보유 현황 snapshot과 함께 추적할 수 있어야 한다.
+보유 조회 자체의 상태는 `ProviderHoldingSnapshot`에 임의 필드로 넣지 않고 `ProviderLookupResult`의 `lookup_status`로 전달해야 한다. `PARTIAL`, `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED`, `STALE`, `UNAVAILABLE`은 서로 구분되어야 하며, 대시보드 입력과 테스트는 이 상태를 보유 현황 snapshot과 함께 추적할 수 있어야 한다.
 
 provider 보유 현황은 현재 보유 상태 입력이며, 개별 매수/매도 거래 원장인 `Trade`를 대체하지 않는다. provider가 체결 내역 없이 보유 수량과 평균 매수가만 제공하면 시스템은 이를 가짜 거래로 변환하지 않고, 거래 원장이 필요한 기능은 `UNAVAILABLE` 또는 `미산출` 상태로 둔다.
 
@@ -144,7 +144,7 @@ provider 인증이 실패하면 시스템은 사용자 API 자격 증명이나 �
 
 - [ ] 토스증권 API는 첫 read-only provider 검증 대상으로 문서화되어 있다.
 - [ ] provider adapter는 보유 종목을 `ProviderHoldingSnapshot`, 현재가와 종목 기준가를 `PriceSnapshot`, KOSPI/KOSDAQ 지수를 `MarketIndexSnapshot` owner 용어로 정규화한다.
-- [ ] provider 조회 상태는 `ProviderLookupResult.lookup_status`로 보존하며 `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED`, `STALE`, `UNAVAILABLE`을 구분한다.
+- [ ] provider 조회 상태는 `ProviderLookupResult.lookup_status`로 보존하며 `PARTIAL`, `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED`, `STALE`, `UNAVAILABLE`을 구분한다.
 - [ ] provider 가격/지수 결과는 provider명, provider source id 또는 원본 출처, 기준 시각(`captured_at`), 마지막 갱신 시각(`refreshed_at`), 데이터 상태(`data_status`), 스냅샷 역할(`snapshot_role`)을 필수 메타데이터로 포함하고, 실패 원인은 `ProviderLookupResult`에 보존한다.
 - [ ] provider 보유 조회 결과는 provider명, 계좌 식별자, 원본 종목 정보, 기준 시각(`captured_at`), 마지막 갱신 시각(`refreshed_at`), 조회/계산 상태를 보존하되 `ProviderHoldingSnapshot`에 없는 필드를 임의로 추가하지 않는다.
 - [ ] provider 보유 종목의 원본 심볼/종목명/시장 구분은 내부 `Stock`으로 매핑되거나, 매핑 불가 시 provider-only unmapped 상태로 보존되며 임의 drop 또는 자동 병합되지 않는다.
