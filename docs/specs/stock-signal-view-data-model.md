@@ -46,6 +46,26 @@ MVP에서는 수수료와 세금을 선택 입력으로 둘 수 있으며, 입�
 
 사용자는 계산 결과를 직접 입력하지 않는다. 계산 결과는 거래, 가격, 시장 지수 입력값에서 시스템이 산출한다.
 
+### 공통 조회 상태
+
+provider 또는 내부 입력 경로가 값을 조회하거나 정규화할 때의 성공/실패 상태다.
+
+허용 상태:
+
+- `AVAILABLE`: 값을 사용할 수 있음
+- `STALE`: 값은 있으나 지연 또는 신선도 정책 확인이 필요함
+- `UNAVAILABLE`: 값이 없어 계산에 사용할 수 없음
+- `UNAUTHORIZED`: 인증 실패 또는 만료로 조회할 수 없음
+- `FORBIDDEN`: 권한 없음 또는 계좌 접근 불가
+- `PROVIDER_ERROR`: provider 오류 또는 일시 장애
+- `UNSUPPORTED`: provider가 해당 조회를 지원하지 않음
+
+규칙:
+
+- `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED`를 단순 `UNAVAILABLE`로 접어 저장하면 안 된다.
+- 대시보드와 테스트가 사용자 조치가 필요한 인증/권한 문제와 일시적 provider 오류를 구분할 수 있어야 한다.
+- `PriceSnapshot.data_status`와 `MarketIndexSnapshot.data_status`는 스냅샷 값의 사용 가능 상태를 나타낸다. 조회 자체의 실패 원인과 대상별 상태 묶음은 `ProviderLookupResult`로 전달한다.
+
 ## 데이터 모델
 
 ### Stock
@@ -105,7 +125,9 @@ MVP에서는 수수료와 세금을 선택 입력으로 둘 수 있으며, 입�
 필드 초안:
 
 - `id`: 내부 식별자
-- `stock_id`: 종목 식별자
+- `stock_id`: 종목 식별자. provider-only unmapped 가격이면 비울 수 있다.
+- `provider_symbol`: provider가 반환한 원본 종목 코드 또는 심볼
+- `provider_market`: provider가 반환한 원본 시장 구분
 - `price`: 가격
 - `provider`: 가격을 제공한 provider 또는 내부 입력 주체
 - `provider_source_id`: provider 내부의 시세 소스 또는 연동 식별자
@@ -119,7 +141,10 @@ MVP에서는 수수료와 세금을 선택 입력으로 둘 수 있으며, 입�
 규칙:
 
 - MVP는 사용자가 현재가를 직접 입력하거나 모의 가격을 사용할 수 있다.
+- 수동 입력과 모의 가격은 명시 값이 없으면 기본적으로 `snapshot_role`을 `CURRENT`, `data_status`를 `AVAILABLE`로 저장한다.
 - 한 종목에 여러 가격 스냅샷을 저장할 수 있다.
+- provider-only unmapped 가격은 `stock_id` 없이 `provider`, `provider_symbol`, `provider_market` 조합으로 `ProviderHoldingSnapshot.raw_provider_symbol`, `raw_market`과 연결할 수 있다.
+- provider-only 가격 연결은 내부 `Stock` upsert나 자동 병합을 의미하지 않는다. 내부 종목 조인이 필요한 기능은 계속 `UNAVAILABLE` 또는 `미산출`로 둘 수 있다.
 - 대시보드는 기본적으로 `snapshot_role`이 `CURRENT`이고 `data_status`가 `AVAILABLE`인 가장 최근 가격 스냅샷을 평가금액 계산에 사용한다.
 - `DAY_BASELINE`은 특정 영업일 기준가, `HOLDING_PERIOD_BASELINE`은 보유 기간 시작 기준가처럼 수익률 기준값을 분리해 보존한다.
 - provider 연동 가격은 값을 산출한 기준 시각(`captured_at`)과 시스템이 값을 가져온 시각(`refreshed_at`)을 구분해 저장한다.
@@ -147,6 +172,7 @@ KOSPI/KOSDAQ 같은 시장 지수의 특정 시점 입력값이다.
 규칙:
 
 - KOSPI 종목은 KOSPI 지수, KOSDAQ 종목은 KOSDAQ 지수를 기본 비교 대상으로 사용한다.
+- 수동 입력과 모의 지수는 명시 값이 없으면 기본적으로 `snapshot_role`을 `CURRENT`, `data_status`를 `AVAILABLE`로 저장한다.
 - 시장 수익률 계산은 `CURRENT` 지수와 기준 역할(`DAY_BASELINE` 또는 `HOLDING_PERIOD_BASELINE`) 지수를 명시적으로 구분해 사용한다.
 - `data_status`가 `STALE`인 지수는 화면에 지연 상태로 표시한다. 계산 서비스는 사용자나 정책이 허용한 지연 허용 범위 안에서만 이를 사용할 수 있으며, 허용 범위를 벗어나면 시장 수익률과 상대수익률을 `UNAVAILABLE` 또는 `미산출`로 처리한다.
 - 기준일 지수 또는 현재 지수가 없거나 `data_status`가 `UNAVAILABLE`이면 시장 수익률과 상대수익률은 `미산출` 상태로 표시한다.
@@ -186,6 +212,31 @@ KOSPI/KOSDAQ 같은 시장 지수의 특정 시점 입력값이다.
 - 거래별 판단 사유, 수수료, 세금, 체결 시각이 필요한 기능은 `Trade` 원장이 있을 때만 계산하거나 표시한다.
 - `PortfolioPosition`은 내부 `Trade` 원장과 provider 보유 현황을 같은 화면에 사용할 수 있지만, 어떤 입력에서 계산되었는지와 계산 상태를 구분해야 한다.
 - provider 보유 현황과 내부 거래 원장이 같은 종목에 대해 충돌하면 자동 병합하지 않고 후속 동기화 정책 또는 사용자 확인 대상으로 둔다.
+
+### ProviderLookupResult
+
+provider 조회 또는 내부 provider-normalization 단계의 상태 envelope다. `ProviderHoldingSnapshot`, `PriceSnapshot`, `MarketIndexSnapshot` 같은 owner 모델에 없는 실패 원인이나 대상별 조회 상태를 보존한다.
+
+필드 초안:
+
+- `id`: 내부 식별자 또는 요청 단위 식별자
+- `provider`: provider명
+- `lookup_type`: 조회 유형 (`HOLDINGS`, `PRICE`, `MARKET_INDEX`)
+- `lookup_status`: 공통 조회 상태
+- `target_key`: 조회 대상 키. 보유 조회는 계좌 식별자, 가격 조회는 `provider_symbol` 또는 `stock_id`, 지수 조회는 시장 구분을 사용한다.
+- `error_code`: provider 또는 시스템이 분류한 오류 코드
+- `message`: 사용자에게 표시 가능한 상태 메시지
+- `captured_at`: provider 값의 기준 시각. 값이 없으면 비울 수 있다.
+- `refreshed_at`: 조회 또는 갱신 시각
+- `source`: 입력 출처 (`BROKER_API`, `MARKET_API`, `IMPORT`, `MOCK`)
+- `created_at`: 등록 시각
+
+규칙:
+
+- 보유 목록, 가격, 지수 조회가 실패해 owner snapshot을 만들 수 없어도 `ProviderLookupResult`는 실패 원인을 보존해야 한다.
+- 보유 조회의 `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `STALE` 상태는 `ProviderHoldingSnapshot`에 임의 필드를 추가하지 않고 `ProviderLookupResult` 또는 파생 `PortfolioPosition.calculation_status`로 전달한다.
+- 가격/지수 조회의 인증 실패와 provider 오류는 `PriceSnapshot.data_status` 또는 `MarketIndexSnapshot.data_status`만으로 표현하지 않고 `ProviderLookupResult.lookup_status`에 보존한다.
+- snapshot이 생성된 경우에도 stale 또는 partial 상태가 있으면 snapshot의 `data_status`와 조회 envelope의 `lookup_status`를 함께 전달할 수 있다.
 
 ### AlertRule
 
@@ -260,10 +311,10 @@ KOSPI/KOSDAQ 같은 시장 지수의 특정 시점 입력값이다.
 
 - `PortfolioPosition`은 저장 원장이 아니라 거래, 가격, 지수 입력에서 재계산되는 파생 결과로 본다.
 - provider 보유 현황만 있는 종목의 `PortfolioPosition`은 `ProviderHoldingSnapshot`,
-  `PriceSnapshot`, `MarketIndexSnapshot`에서 산출될 수 있다. 이 경우 실현손익,
+  `PriceSnapshot`, `MarketIndexSnapshot`, `ProviderLookupResult`에서 산출될 수 있다. 이 경우 실현손익,
   거래 타임라인, 거래 메모 기반 판단 회고처럼 거래 원장이 필요한 값은
   `UNAVAILABLE` 또는 `미산출`로 둔다.
-- provider-only 보유 현황에 `average_cost`와 현재가가 있으면 `average_cost_current_return_rate`는 표시할 수 있다. 그러나 첫 매수일, 보유기간 기준 종목 가격, 보유기간 기준 시장 지수 중 필요한 기준값이 없으면 `holding_period_relative_return_rate`와 호환 필드 `relative_return_rate`는 `UNAVAILABLE` 또는 `미산출` 상태로 둔다.
+- provider-only 보유 현황에 양수 `average_cost`, 양수 보유 수량, 현재가가 있으면 `average_cost_current_return_rate`는 표시할 수 있다. 그러나 첫 매수일, 보유기간 기준 종목 가격, 보유기간 기준 시장 지수 중 필요한 기준값이 없으면 `holding_period_relative_return_rate`와 호환 필드 `relative_return_rate`는 `UNAVAILABLE` 또는 `미산출` 상태로 둔다.
 - `daily_stock_return_rate`, `daily_market_return_rate`, `daily_relative_return_rate`는 당일 기준 가격과 당일 기준 시장 지수로 계산하는 당일 triplet이다. `holding_period_stock_return_rate`, `holding_period_market_return_rate`, `holding_period_relative_return_rate`는 현재 보유 기간 시작 기준값으로 계산하는 보유기간 triplet이다.
 - 당일 상대수익률과 보유기간 상대수익률은 서로 다른 필드에 보존한다. `daily_relative_return_rate`가 `holding_period_relative_return_rate` 또는 `relative_return_rate`를 overwrite해서는 안 되며, 보유기간 상대수익률도 당일 상대수익률을 overwrite해서는 안 된다.
 - provider spec은 평균단가 기준 현재 수익률을 `average_cost_current_return_rate`, 당일 상대수익률을 `daily_relative_return_rate`, 보유기간 상대수익률을 `holding_period_relative_return_rate` 또는 기존 호환 필드 `relative_return_rate`로 참조해야 한다.
@@ -339,6 +390,7 @@ AI Dashboard Planner는 이 데이터를 직접 변경하지 않는다. Planner�
 - 읽기 전용 보유 종목 API: `ProviderHoldingSnapshot` 생성 또는 갱신
 - 시세 API: `PriceSnapshot` 생성
 - 시장 지수 API: `MarketIndexSnapshot` 생성
+- provider 조회 상태 API: `ProviderLookupResult` 생성 또는 갱신
 - 뉴스/공시 API: MVP 이후 별도 도메인 모델로 분리
 - AI API: 거래 메모와 성과 데이터를 읽고 Dashboard Schema 초안을 생성하는 플래너 경계로 분리
 

@@ -46,6 +46,8 @@ provider는 사용자의 보유 종목 목록을 조회하고, 종목 코드, �
 
 정규화 결과는 provider 원본 응답을 화면이나 계산 서비스에 직접 넘기지 않고 `ProviderHoldingSnapshot`의 owner 용어를 사용해야 한다. 최소한 `provider`, `external_account_id`, `provider_account_name`, `raw_provider_symbol`, `raw_provider_name`, `raw_market`, `held_quantity`, `average_cost`, `cost_basis_source`, `captured_at`, `refreshed_at`를 보존하고, 내부 `Stock`으로 매핑된 경우에만 `stock_id`를 채운다. provider 원본 종목을 매핑할 수 없으면 provider-only 보유 현황으로 보존한다. 로컬 `Stock`이 없다는 이유만으로 보유 현황을 drop하거나 임의 종목으로 합치면 안 된다. 보유 조회의 인증 실패, 권한 없음, provider 오류, 데이터 지연 같은 상태는 `ProviderHoldingSnapshot` 필드로 위조하지 않고 조회 결과 또는 계산 상태로 함께 전달한다.
 
+보유 조회 자체의 상태는 `ProviderHoldingSnapshot`에 임의 필드로 넣지 않고 `ProviderLookupResult`의 `lookup_status`로 전달해야 한다. `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED`, `STALE`, `UNAVAILABLE`은 서로 구분되어야 하며, 대시보드 입력과 테스트는 이 상태를 보유 현황 snapshot과 함께 추적할 수 있어야 한다.
+
 provider 보유 현황은 현재 보유 상태 입력이며, 개별 매수/매도 거래 원장인 `Trade`를 대체하지 않는다. provider가 체결 내역 없이 보유 수량과 평균 매수가만 제공하면 시스템은 이를 가짜 거래로 변환하지 않고, 거래 원장이 필요한 기능은 `UNAVAILABLE` 또는 `미산출` 상태로 둔다.
 
 provider가 보유 종목 목록을 제공하지 못하면 시스템은 권한 없음, 인증 실패, provider 미지원, 일시 오류 중 하나로 구분 가능한 상태를 반환해야 한다.
@@ -56,7 +58,11 @@ provider가 보유 종목 목록을 제공하지 못하면 시스템은 권한 �
 
 provider는 보유 또는 관심 종목의 현재가를 조회할 수 있어야 한다.
 
-현재가는 값만 전달하지 않고 `docs/specs/stock-signal-view-data-model.md`의 `PriceSnapshot`으로 정규화해야 한다. 스냅샷은 `provider`, `provider_source_id`, 가격 값, 가격 기준 시각인 `captured_at`, provider에서 가져온 마지막 갱신 시각인 `refreshed_at`, `data_status`, `snapshot_role`을 함께 보존해야 한다. 현재 평가에 쓰는 가격, 당일 기준 가격, 보유기간 기준 가격은 같은 숫자 필드로 섞지 않고 `snapshot_role`로 역할을 구분한다. 현재가가 없거나 지연되면 계산 서비스와 대시보드는 해당 상태를 `미산출`, `지연`, `오류` 중 이해 가능한 상태로 전달해야 한다.
+현재가는 값만 전달하지 않고 `docs/specs/stock-signal-view-data-model.md`의 `PriceSnapshot`으로 정규화해야 한다. 스냅샷은 `provider`, `provider_source_id`, `provider_symbol`, `provider_market`, 가격 값, 가격 기준 시각인 `captured_at`, provider에서 가져온 마지막 갱신 시각인 `refreshed_at`, `data_status`, `snapshot_role`을 함께 보존해야 한다. 현재 평가에 쓰는 가격, 당일 기준 가격, 보유기간 기준 가격은 같은 숫자 필드로 섞지 않고 `snapshot_role`로 역할을 구분한다. 현재가가 없거나 지연되면 계산 서비스와 대시보드는 해당 상태를 `미산출`, `지연`, `오류` 중 이해 가능한 상태로 전달해야 한다.
+
+provider-only unmapped 보유 종목의 현재가는 내부 `Stock`이 없어도 `provider`, `provider_symbol`, `provider_market`으로 `ProviderHoldingSnapshot.raw_provider_symbol`, `raw_market`에 연결할 수 있어야 한다. 이 연결은 내부 종목 자동 생성이나 임의 병합을 의미하지 않는다.
+
+가격 조회의 인증 실패, 권한 없음, provider 오류, 미지원, 지연 상태는 `PriceSnapshot.data_status`만으로 접지 않고 `ProviderLookupResult.lookup_status`에 원인을 보존해야 한다. snapshot을 만들 수 없는 실패도 조회 결과 envelope로 전달한다.
 
 당일 상대성과를 계산하려면 현재가뿐 아니라 당일 기준 종목 가격(예: 전일 종가 또는 당일 장 시작 기준가), 현재 시장 지수, 당일 기준 시장 지수, 각 값의 기준 시각이 필요하다. provider 또는 내부 가격 스냅샷이 이 기준 입력을 제공하지 못하면 당일 상대성과는 임의로 추정하지 않고 `UNAVAILABLE` 또는 `미산출` 상태로 반환해야 한다.
 
@@ -68,11 +74,15 @@ provider 또는 시장 데이터 소스는 KOSPI와 KOSDAQ 지수 값을 조회�
 
 KOSPI 종목은 KOSPI 지수, KOSDAQ 종목은 KOSDAQ 지수를 기본 비교 기준으로 사용한다. 기준 지수 또는 현재 지수가 없으면 시장 수익률과 상대성과는 계산하지 않는다.
 
+지수 조회의 인증 실패, 권한 없음, provider 오류, 미지원, 지연 상태는 `MarketIndexSnapshot.data_status`만으로 접지 않고 `ProviderLookupResult.lookup_status`에 원인을 보존해야 한다. snapshot을 만들 수 없는 실패도 조회 결과 envelope로 전달한다.
+
 ### RMP-005 상대성과 계산 연결
 
 정규화된 provider 데이터는 `docs/specs/stock-signal-view-calculation-rules.md`의 계산 규칙을 따른다.
 
 평균단가 기준 현재 수익률은 `average_cost_current_return_rate`로 표현하며, provider 보유 현황의 `average_cost`와 현재 역할의 `PriceSnapshot`을 사용한다. 이 값은 당일 상대성과나 보유기간 상대성과를 대체하지 않는다.
+
+평균단가 기준 현재 수익률은 양수 보유 수량, 양수 `average_cost`, 현재 역할의 사용 가능한 현재가가 있을 때만 계산한다. `average_cost`가 없거나 0 이하이면 0으로 대체하거나 무한대 수익률을 만들지 않고 `UNAVAILABLE` 또는 `미산출` 상태를 전달한다.
 
 당일 상대성과는 `daily_stock_return_rate`, `daily_market_return_rate`, `daily_relative_return_rate` triplet으로 표현한다. `daily_relative_return_rate`는 종목 당일 수익률에서 같은 시장의 당일 지수 수익률을 뺀 값이다.
 
@@ -134,11 +144,14 @@ provider 인증이 실패하면 시스템은 사용자 API 자격 증명이나 �
 
 - [ ] 토스증권 API는 첫 read-only provider 검증 대상으로 문서화되어 있다.
 - [ ] provider adapter는 보유 종목을 `ProviderHoldingSnapshot`, 현재가와 종목 기준가를 `PriceSnapshot`, KOSPI/KOSDAQ 지수를 `MarketIndexSnapshot` owner 용어로 정규화한다.
-- [ ] provider 가격/지수 결과는 provider명, provider source id 또는 원본 출처, 기준 시각(`captured_at`), 마지막 갱신 시각(`refreshed_at`), 데이터 상태(`data_status`), 스냅샷 역할(`snapshot_role`)을 필수 메타데이터로 포함한다.
+- [ ] provider 조회 상태는 `ProviderLookupResult.lookup_status`로 보존하며 `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED`, `STALE`, `UNAVAILABLE`을 구분한다.
+- [ ] provider 가격/지수 결과는 provider명, provider source id 또는 원본 출처, 기준 시각(`captured_at`), 마지막 갱신 시각(`refreshed_at`), 데이터 상태(`data_status`), 스냅샷 역할(`snapshot_role`)을 필수 메타데이터로 포함하고, 실패 원인은 `ProviderLookupResult`에 보존한다.
 - [ ] provider 보유 조회 결과는 provider명, 계좌 식별자, 원본 종목 정보, 기준 시각(`captured_at`), 마지막 갱신 시각(`refreshed_at`), 조회/계산 상태를 보존하되 `ProviderHoldingSnapshot`에 없는 필드를 임의로 추가하지 않는다.
 - [ ] provider 보유 종목의 원본 심볼/종목명/시장 구분은 내부 `Stock`으로 매핑되거나, 매핑 불가 시 provider-only unmapped 상태로 보존되며 임의 drop 또는 자동 병합되지 않는다.
+- [ ] provider-only unmapped 보유 종목의 가격은 내부 `Stock` 없이도 `provider`, `provider_symbol`, `provider_market`으로 원본 보유 종목에 연결될 수 있으며, 이 연결은 자동 upsert나 병합을 의미하지 않는다.
 - [ ] 인증 실패, 권한 없음, provider 오류, 데이터 지연 상태가 계산 결과와 대시보드에 전달된다.
 - [ ] 평균단가 기준 현재 수익률(`average_cost_current_return_rate`), 당일 triplet(`daily_stock_return_rate`, `daily_market_return_rate`, `daily_relative_return_rate`), 보유기간 triplet(`holding_period_stock_return_rate`, `holding_period_market_return_rate`, `holding_period_relative_return_rate`)은 서로 다른 계산 기준으로 보존된다.
+- [ ] 평균단가 기준 현재 수익률은 양수 보유 수량, 양수 평균단가 또는 보유 원가, 현재가가 있을 때만 계산되며 평균단가가 없거나 0 이하이면 `UNAVAILABLE` 또는 `미산출` 상태가 된다.
 - [ ] 당일 상대성과 기준 입력(당일 기준 종목 가격, 당일 기준 시장 지수, 현재가, 현재 시장 지수, 각 기준 시각)이 없으면 해당 지표는 계산되지 않고 `UNAVAILABLE` 또는 `미산출` 상태가 된다.
 - [ ] 보유 기간 상대성과 기준 입력(첫 매수일, 첫 매수 기준가 또는 거래 원장, 기준일 시장 지수)이 없으면 해당 지표는 계산되지 않고 `UNAVAILABLE` 또는 `미산출` 상태가 된다.
 - [ ] 당일 상대성과와 보유 기간 상대성과는 `docs/specs/stock-signal-view-calculation-rules.md`의 산식을 따른다.
@@ -150,8 +163,10 @@ provider 인증이 실패하면 시스템은 사용자 API 자격 증명이나 �
 ## 검증 기대치
 
 - `backend/tests`: fake provider로 보유 종목이 `ProviderHoldingSnapshot`, 현재가와 종목 기준가가 `PriceSnapshot`, KOSPI/KOSDAQ 지수가 `MarketIndexSnapshot` owner 용어로 정규화되는지 테스트를 추가한다.
-- `backend/tests`: provider metadata, `captured_at`, `refreshed_at`, 가격/지수의 `data_status`와 `snapshot_role`, 보유 조회의 상태 전달, provider 원본 종목의 `Stock` 매핑/미매핑 보존 동작이 정규화 결과에 포함되는지 검증한다.
-- `backend/tests`: 인증 실패, 권한 없음, 데이터 지연, provider 오류 상태가 안전하게 전파되는지 검증한다.
+- `backend/tests`: provider metadata, `captured_at`, `refreshed_at`, 가격/지수의 `data_status`와 `snapshot_role`, `ProviderLookupResult.lookup_status`, provider 원본 종목의 `Stock` 매핑/미매핑 보존 동작이 정규화 결과에 포함되는지 검증한다.
+- `backend/tests`: 인증 실패, 권한 없음, 데이터 지연, provider 오류 상태가 서로 구분 가능한 `ProviderLookupResult`로 안전하게 전파되는지 검증한다.
+- `backend/tests`: provider-only unmapped 보유 종목이 `provider`, `provider_symbol`, `provider_market`으로 가격 snapshot에 연결되고 내부 `Stock` 자동 upsert 없이 보존되는지 검증한다.
+- `backend/tests`: 평균단가가 없거나 0 이하인 provider-only 보유 현황은 평균단가 기준 현재 수익률을 계산하지 않고 `UNAVAILABLE` 또는 `미산출` 상태를 반환하는지 검증한다.
 - `backend/tests`: provider 데이터와 거래 원장 또는 기준 입력으로 평균단가 기준 현재 수익률, 당일 triplet, 보유기간 triplet이 계산 규칙과 일치하며 서로 overwrite되지 않는지 검증한다.
 - `backend/tests`: 당일 상대성과 기준 입력이 없거나 기준 시각 정책이 맞지 않을 때 provider 현재가만으로 값을 추정하지 않고 `UNAVAILABLE` 또는 `미산출` 상태를 반환하는지 검증한다.
 - `backend/tests`: 보유 기간 상대성과 기준 입력이 없을 때 provider 현재가만으로 값을 추정하지 않고 `UNAVAILABLE` 또는 `미산출` 상태를 반환하는지 검증한다.
