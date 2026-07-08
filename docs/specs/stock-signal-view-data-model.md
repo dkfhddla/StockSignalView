@@ -63,7 +63,7 @@ provider 또는 내부 입력 경로가 값을 조회하거나 정규화할 때�
 
 규칙:
 
-- `PARTIAL`, `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED`를 단순 `UNAVAILABLE`로 접어 저장하면 안 된다.
+- `PARTIAL`, `STALE`, `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED`를 단순 `UNAVAILABLE`로 접어 저장하면 안 된다.
 - 대시보드와 테스트가 사용자 조치가 필요한 인증/권한 문제와 일시적 provider 오류를 구분할 수 있어야 한다.
 - `PriceSnapshot.data_status`와 `MarketIndexSnapshot.data_status`는 스냅샷 값의 사용 가능 상태를 나타낸다. 조회 자체의 실패 원인과 대상별 상태 묶음은 `ProviderLookupResult`로 전달한다.
 
@@ -209,7 +209,7 @@ KOSPI/KOSDAQ 같은 시장 지수의 특정 시점 입력값이다.
 - adapter는 정책상 허용될 때 `raw_provider_symbol`, `raw_provider_name`, `raw_market`을 사용해 `Stock`을 매핑하거나 upsert할 수 있다.
 - adapter가 `Stock`을 매핑하거나 upsert할 수 없으면 `stock_id`를 비워 provider-only 보유 현황을 unmapped 상태로 보존한다.
 - 로컬 `Stock`이 없다는 이유만으로 provider-only 보유 현황을 drop하지 않는다.
-- unmapped 보유 현황은 내부 종목 조인이 필요한 계산과 대시보드 표시에 사용할 수 없으며 해당 값은 `UNAVAILABLE` 또는 `미산출` 상태로 표시한다.
+- unmapped 보유 현황은 내부 `Stock` 조인이 필요한 계산과 대시보드 표시에는 사용할 수 없으며 해당 값은 `UNAVAILABLE` 또는 `미산출` 상태로 표시한다. 단, provider 원본 식별자와 provider-only 가격 연결만으로 산출 가능한 `position_key`, 보유 수량, 평균단가 기준 현재 수익률 같은 provider-only 행 표시는 허용한다.
 - 거래별 판단 사유, 수수료, 세금, 체결 시각이 필요한 기능은 `Trade` 원장이 있을 때만 계산하거나 표시한다.
 - `PortfolioPosition`은 내부 `Trade` 원장과 provider 보유 현황을 같은 화면에 사용할 수 있지만, 어떤 입력에서 계산되었는지와 계산 상태를 구분해야 한다.
 - provider 보유 현황과 내부 거래 원장이 같은 종목에 대해 충돌하면 자동 병합하지 않고 후속 동기화 정책 또는 사용자 확인 대상으로 둔다.
