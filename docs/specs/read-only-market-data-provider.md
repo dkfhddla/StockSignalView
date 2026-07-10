@@ -44,7 +44,7 @@ StockSignalView의 초기 MVP는 외부 API 없이 수동 입력 또는 모의 �
 
 provider는 사용자의 보유 종목 목록을 조회하고, 종목 코드, 종목명, 시장 구분, 보유 수량, 평균 매수가 또는 계산 가능한 원가 근거를 `docs/specs/stock-signal-view-data-model.md`의 `ProviderHoldingSnapshot`으로 정규화해야 한다.
 
-정규화 결과는 provider 원본 응답을 화면이나 계산 서비스에 직접 넘기지 않고 `ProviderHoldingSnapshot`의 owner 용어를 사용해야 한다. 최소한 `provider`, `external_account_id`, `provider_account_name`, `raw_provider_symbol`, `raw_provider_name`, `raw_market`, `held_quantity`, `average_cost`, `cost_basis_source`, `captured_at`, `refreshed_at`를 보존하고, 내부 `Stock`으로 매핑된 경우에만 `stock_id`를 채운다. provider 원본 종목을 매핑할 수 없으면 provider-only 보유 현황으로 보존한다. 로컬 `Stock`이 없다는 이유만으로 보유 현황을 drop하거나 임의 종목으로 합치면 안 된다. 보유 조회의 인증 실패, 권한 없음, provider 오류, 데이터 지연 같은 상태는 `ProviderHoldingSnapshot` 필드로 위조하지 않고 조회 결과 또는 계산 상태로 함께 전달한다.
+정규화 결과는 provider 원본 응답을 화면이나 계산 서비스에 직접 넘기지 않고 `ProviderHoldingSnapshot`의 owner 용어를 사용해야 한다. 최소한 `provider`, `external_account_id`, `provider_account_name`, `raw_provider_symbol`, `raw_provider_name`, `raw_market`, `held_quantity`, `average_cost`, `cost_basis_source`, `captured_at`, `refreshed_at`를 보존하고, 내부 `Stock`으로 매핑된 경우에만 `stock_id`를 채운다. provider 원본 종목을 매핑할 수 없으면 provider-only 보유 현황으로 보존한다. 로컬 `Stock`이 없다는 이유만으로 보유 현황을 drop하거나 임의 종목으로 합치면 안 된다. 보유 조회의 인증 실패, 권한 없음, provider 오류, 데이터 지연 같은 상태는 `ProviderHoldingSnapshot` 필드로 위조하지 않고 반드시 `ProviderLookupResult.lookup_status`로 보유 현황 snapshot과 함께 전달한다.
 
 보유 조회 자체의 상태는 `ProviderHoldingSnapshot`에 임의 필드로 넣지 않고 `ProviderLookupResult`의 `lookup_status`로 전달해야 한다. `PARTIAL`, `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED`, `STALE`, `UNAVAILABLE`은 서로 구분되어야 하며, 대시보드 입력과 테스트는 이 상태를 보유 현황 snapshot과 함께 추적할 수 있어야 한다.
 
@@ -58,7 +58,7 @@ provider가 보유 종목 목록을 제공하지 못하면 시스템은 권한 �
 
 provider는 보유 또는 관심 종목의 현재가를 조회할 수 있어야 한다.
 
-현재가는 값만 전달하지 않고 `docs/specs/stock-signal-view-data-model.md`의 `PriceSnapshot`으로 정규화해야 한다. 스냅샷은 `provider`, `provider_source_id`, `provider_symbol`, `provider_market`, 가격 값, 가격 기준 시각인 `captured_at`, provider에서 가져온 마지막 갱신 시각인 `refreshed_at`, `data_status`, `snapshot_role`을 함께 보존해야 한다. 현재 평가에 쓰는 가격, 당일 기준 가격, 보유기간 기준 가격은 같은 숫자 필드로 섞지 않고 `snapshot_role`로 역할을 구분한다. 현재가가 없거나 지연되면 계산 서비스와 대시보드는 해당 상태를 `미산출`, `지연`, `오류` 중 이해 가능한 상태로 전달해야 한다.
+현재가는 값만 전달하지 않고 `docs/specs/stock-signal-view-data-model.md`의 `PriceSnapshot`으로 정규화해야 한다. 스냅샷은 `provider`, `provider_source_id`, `provider_symbol`, `provider_market`, 가격 값, 가격 기준 시각인 `captured_at`, provider에서 가져온 마지막 갱신 시각인 `refreshed_at`, `data_status`, `snapshot_role`을 함께 보존해야 한다. 현재 평가에 쓰는 가격, 당일 기준 가격, 보유기간 기준 가격은 같은 숫자 필드로 섞지 않고 `snapshot_role`로 역할을 구분한다. 현재가가 없거나 지연되면 계산 서비스는 해당 상태를 `미산출`, `지연`, `오류` 중 이해 가능한 상태로 전달해야 하며, 대시보드 표시는 Dashboard Schema와 Widget Registry의 후속 계약 확장 뒤에만 수행한다.
 
 provider-only unmapped 보유 종목의 현재가는 내부 `Stock`이 없어도 `provider`, `provider_symbol`, `provider_market`으로 `ProviderHoldingSnapshot.raw_provider_symbol`, `raw_market`에 연결할 수 있어야 한다. 이 연결은 내부 종목 자동 생성이나 임의 병합을 의미하지 않는다.
 
@@ -98,11 +98,13 @@ KOSPI 종목은 KOSPI 지수, KOSDAQ 종목은 KOSDAQ 지수를 기본 비교 �
 
 provider 데이터는 검증 가능한 Dashboard Schema와 허용된 위젯을 통해서만 화면에 표시되어야 한다.
 
+인증 실패, 권한 없음, provider 오류, 데이터 지연의 원인은 `ProviderLookupResult.lookup_status`로 계산 결과와 대시보드 입력까지 보존한다. 이 상태를 대시보드에 표시하는 필드와 위젯 동작은 Dashboard Schema와 Widget Registry의 후속 확장이 소유한다. 후속 확장 전에는 현재 Schema v1에 없는 상태 필드나 위젯 옵션을 emit하지 않고, API 또는 계약 테스트에서 상태 보존과 검증 경계 준수만 확인한다.
+
 Dashboard Schema와 Widget Registry 후속 확장 뒤 대시보드는 보유 종목별 현재가, `average_cost_current_return_rate`로 계산한 평균단가 기준 현재 수익률, `daily_relative_return_rate`로 계산한 당일 시장 대비 상대성과, `holding_period_relative_return_rate` 또는 기존 호환 필드 `relative_return_rate`로 계산한 보유기간 기준 상대성과를 분리해 표시할 수 있어야 한다.
 
-provider명, 데이터 출처, 가격 기준 시각, 마지막 갱신 시각, 데이터 상태를 Dashboard Schema와 Widget Registry에 노출하는 정확한 계약은 `docs/dashboard-schema-v1.md`와 `docs/widget-registry.md`가 소유한다. 본 사양은 해당 메타데이터가 계산 결과와 대시보드 입력까지 보존되어야 한다는 요구를 소유하며, Schema/Widget 계약 확장은 별도 후속 변경에서 반영한다.
+provider명, 데이터 출처, 가격 기준 시각, 마지막 갱신 시각, 데이터 상태, `ProviderLookupResult.lookup_status`를 Dashboard Schema와 Widget Registry에 노출하는 정확한 계약은 `docs/dashboard-schema-v1.md`와 `docs/widget-registry.md`가 소유한다. 본 사양은 해당 메타데이터와 조회 실패 원인이 계산 결과와 대시보드 입력까지 보존되어야 한다는 요구를 소유하며, Schema/Widget 계약 확장은 별도 후속 변경에서 반영한다.
 
-정확한 Dashboard Schema/Widget Registry 표시 필드 추가는 후속 작업이다. 그 전까지 provider-derived fields, provider metadata, `average_cost_current_return_rate`, `daily_*`, `holding_period_*`, `snapshot_role`은 schema validation을 우회해 전달하거나 현재 렌더러가 허용하지 않는 widget column, option, data requirement 필드로 emit하면 안 된다. 현재 Dashboard Schema v1이 허용하는 기존 필드만 사용해야 하며, 새 표시 필드는 `docs/dashboard-schema-v1.md`, `docs/widget-registry.md`, 백엔드/프론트엔드 validator가 함께 확장된 뒤 사용한다.
+정확한 Dashboard Schema/Widget Registry 표시 필드 추가는 후속 작업이다. 그 전까지 provider-derived fields, provider metadata, `ProviderLookupResult.lookup_status`, `average_cost_current_return_rate`, `daily_*`, `holding_period_*`, `snapshot_role`은 schema validation을 우회해 전달하거나 현재 렌더러가 허용하지 않는 widget column, option, data requirement 필드로 emit하면 안 된다. 현재 Dashboard Schema v1이 허용하는 기존 필드만 사용해야 하며, 새 표시 필드는 `docs/dashboard-schema-v1.md`, `docs/widget-registry.md`, 백엔드/프론트엔드 validator가 함께 확장된 뒤 사용한다.
 
 ### RMP-007 출처 없는 AI 요약 금지
 
@@ -126,9 +128,9 @@ AI 출력은 허용된 Dashboard Schema와 위젯 레지스트리 계약을 통�
 
 ### S-RMP-003 provider 인증 실패
 
-provider 인증이 실패하면 시스템은 사용자 API 자격 증명이나 내부 토큰을 노출하지 않고 오류 상태를 반환한다.
+provider 인증이 실패하면 시스템은 사용자 API 자격 증명이나 내부 토큰을 노출하지 않고 `ProviderLookupResult.lookup_status`로 오류 상태를 반환한다.
 
-대시보드는 마지막 성공 갱신 시각이 있으면 함께 표시하고, 현재 데이터가 최신이 아님을 사용자가 이해할 수 있게 보여준다.
+Dashboard Schema와 Widget Registry의 상태 표시 계약이 확장된 뒤 대시보드는 마지막 성공 갱신 시각이 있으면 함께 표시하고, 현재 데이터가 최신이 아님을 사용자가 이해할 수 있게 보여준다.
 
 ## 계약 기준
 
@@ -146,10 +148,10 @@ provider 인증이 실패하면 시스템은 사용자 API 자격 증명이나 �
 - [ ] provider adapter는 보유 종목을 `ProviderHoldingSnapshot`, 현재가와 종목 기준가를 `PriceSnapshot`, KOSPI/KOSDAQ 지수를 `MarketIndexSnapshot` owner 용어로 정규화한다.
 - [ ] provider 조회 상태는 `ProviderLookupResult.lookup_status`로 보존하며 `PARTIAL`, `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED`, `STALE`, `UNAVAILABLE`을 구분한다.
 - [ ] provider 가격/지수 결과는 provider명, provider source id 또는 원본 출처, 기준 시각(`captured_at`), 마지막 갱신 시각(`refreshed_at`), 데이터 상태(`data_status`), 스냅샷 역할(`snapshot_role`)을 필수 메타데이터로 포함하고, 실패 원인은 `ProviderLookupResult`에 보존한다.
-- [ ] provider 보유 조회 결과는 provider명, 계좌 식별자, 원본 종목 정보, 기준 시각(`captured_at`), 마지막 갱신 시각(`refreshed_at`), 조회/계산 상태를 보존하되 `ProviderHoldingSnapshot`에 없는 필드를 임의로 추가하지 않는다.
+- [ ] provider 보유 조회 결과는 provider명, 계좌 식별자, 원본 종목 정보, 기준 시각(`captured_at`), 마지막 갱신 시각(`refreshed_at`), `ProviderLookupResult.lookup_status`와 계산 결과의 계산 가능 여부를 보존하되 `ProviderHoldingSnapshot`에 없는 필드를 임의로 추가하지 않는다.
 - [ ] provider 보유 종목의 원본 심볼/종목명/시장 구분은 내부 `Stock`으로 매핑되거나, 매핑 불가 시 provider-only unmapped 상태로 보존되며 임의 drop 또는 자동 병합되지 않는다.
 - [ ] provider-only unmapped 보유 종목의 가격은 내부 `Stock` 없이도 `provider`, `provider_symbol`, `provider_market`으로 원본 보유 종목에 연결될 수 있으며, 이 연결은 자동 upsert나 병합을 의미하지 않는다.
-- [ ] 인증 실패, 권한 없음, provider 오류, 데이터 지연 상태가 계산 결과와 대시보드에 전달된다.
+- [ ] 인증 실패, 권한 없음, provider 오류, 데이터 지연 상태가 `ProviderLookupResult.lookup_status`로 계산 결과와 대시보드 입력에 구분되어 보존되며, Dashboard Schema와 Widget Registry 후속 확장 뒤에 대시보드에 표시된다.
 - [ ] 평균단가 기준 현재 수익률(`average_cost_current_return_rate`), 당일 triplet(`daily_stock_return_rate`, `daily_market_return_rate`, `daily_relative_return_rate`), 보유기간 triplet(`holding_period_stock_return_rate`, `holding_period_market_return_rate`, `holding_period_relative_return_rate`)은 서로 다른 계산 기준으로 보존된다.
 - [ ] 평균단가 기준 현재 수익률은 양수 보유 수량, 양수 평균단가 또는 보유 원가, 현재가가 있을 때만 계산되며 평균단가가 없거나 0 이하이면 `UNAVAILABLE` 또는 `미산출` 상태가 된다.
 - [ ] 당일 상대성과 기준 입력(당일 기준 종목 가격, 당일 기준 시장 지수, 현재가, 현재 시장 지수, 각 기준 시각)이 없으면 해당 지표는 계산되지 않고 `UNAVAILABLE` 또는 `미산출` 상태가 된다.
