@@ -43,8 +43,9 @@ StockSignalView는 거래 기록과 투자 메모, 시장 대비 상대성과 �
 - 공시 수집
 - AI 기반 분석 요약 고도화
 - 모바일/웹 AI 워크스페이스
-- 실시간 시세 처리
-- 증권사 API 연동과 dry-run 주문
+- 읽기 전용 투자처 API provider 연동(토스증권 API를 첫 검증 대상으로 사용)
+- 실시간/준실시간 시세 처리
+- 증권사 dry-run 주문과 실제 주문 준비(읽기 전용 provider 연동과 분리)
 
 ## 문서
 
@@ -53,6 +54,7 @@ StockSignalView는 거래 기록과 투자 메모, 시장 대비 상대성과 �
 - [문서 표준](docs/guidelines/documentation-standard.md)
 - [제품 요구사항](docs/product-requirements/stock-signal-view.md)
 - [MVP 기반 사양](docs/specs/mvp-foundation.md)
+- [읽기 전용 시장 데이터 Provider 사양](docs/specs/read-only-market-data-provider.md)
 - [Dashboard Schema v1](docs/dashboard-schema-v1.md)
 - [위젯 레지스트리](docs/widget-registry.md)
 - [AI 대시보드 플래너](docs/ai-dashboard-planner.md)

@@ -20,7 +20,7 @@ StockSignalView는 개인 투자자의 거래 기록, 투자 메모, 시장 대�
 - ORM과 마이그레이션은 SQLAlchemy와 Alembic 사용을 전제로 한다.
 - 초기 실행 환경은 Local PC 또는 NAS를 우선한다.
 - 증권사 주문 기능은 기본적으로 비활성화한다.
-- 후속 주문 연동은 `BrokerAdapter` 경계 뒤에 둔다.
+- 후속 외부 투자처 연동은 읽기 전용 시장 데이터와 주문 실행 경계를 분리한다. `ReadOnlyMarketDataProvider`는 보유 종목, 현재가, KOSPI/KOSDAQ 지수를 읽기 전용으로 조회하고, `BrokerOrderAdapter`는 주문 또는 dry-run 주문만 담당한다.
 - 주문 관련 기본값은 `dry_run=true`로 둔다.
 - AI 동적 대시보드는 AI가 코드를 직접 생성해 실행하지 않고, 자연어를 Dashboard Schema JSON으로 변환한 뒤 검증된 렌더러가 표시한다.
 
@@ -28,7 +28,7 @@ StockSignalView는 개인 투자자의 거래 기록, 투자 메모, 시장 대�
 
 이 결정으로 MVP는 종목 관리, 거래 기록, 포트폴리오 계산, 상대수익률 계산, Dashboard Schema v1, 기본 위젯 레지스트리, 동적 렌더러, 기본 알림에 집중할 수 있다.
 
-뉴스, 공시, 고도화된 AI 분석 요약, 외부 AI API 실제 연동, 실시간 시세, 브로커 연동은 아키텍처의 확장 지점으로 남긴다. 실제 외부 API Key와 주문 기능은 보안 기본값과 로그 정책이 구현된 뒤 연결한다.
+뉴스, 공시, 고도화된 AI 분석 요약, 외부 AI API 실제 연동, 실시간 시세, 외부 투자처 연동은 아키텍처의 확장 지점으로 남긴다. 읽기 전용 시장 데이터는 `ReadOnlyMarketDataProvider` 경계에서 먼저 검증하고, 주문 기능은 별도의 `BrokerOrderAdapter`와 보안 기본값·로그 정책이 구현된 뒤 연결한다.
 
 ## 대안
 
