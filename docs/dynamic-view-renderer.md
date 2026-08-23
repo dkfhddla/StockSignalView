@@ -42,8 +42,9 @@ Dashboard Schema 수신
 - `data_key` 또는 `data_keys`를 실제 API 응답 또는 캐시된 계산 결과와 연결한다.
 - 여러 데이터 묶음을 쓰는 위젯은 각 `data_keys[*]`를 병합하지 않고, 위젯이 구분 가능한 입력으로 전달한다.
 - 데이터가 없으면 위젯에 `EMPTY` 또는 `UNAVAILABLE` 상태를 전달한다.
-- 후속 provider 메타데이터 계약이 도입된 뒤 바인딩한 응답의 값이나 메타데이터가 없거나 유효하지 않으면 유효한 Schema를 `INVALID_SCHEMA`로 다시 분류하지 않고 위젯 렌더링 상태를 `UNAVAILABLE`로 전달한다.
+- 후속 provider 메타데이터 계약이 도입된 뒤 바인딩한 응답의 일부 값이나 메타데이터만 없고 나머지 값을 안전하게 표시할 수 있으면 위젯 렌더링 상태를 `PARTIAL`로 전달한다. 핵심 데이터를 모두 사용할 수 없을 때만 `UNAVAILABLE`로 전달하며, 두 경우 모두 유효한 Schema를 `INVALID_SCHEMA`로 다시 분류하지 않는다.
 - `ProviderLookupResult.lookup_status`가 있으면 위젯 렌더링 상태와 대체하지 않고 별도 provider 조회 메타데이터로 함께 전달한다. Owner snapshot을 만들 수 없는 조회 실패도 값 전용 메타데이터 없이 이 조회 상태를 전달할 수 있다.
+- Data Binder는 각 조회 결과의 `lookup_type`과 `target_key`를 사용해 `lookup_status`를 해당 행이나 계산 입력에 연결하며, 한 대상의 조회 실패를 다른 종목이나 지수에 표시하지 않는다.
 
 ### Layout Engine
 

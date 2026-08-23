@@ -157,9 +157,13 @@ Dashboard Schema와 양쪽 validator에 후속 provider 메타데이터 계약�
 
 - `data_status`와 `lookup_status`를 하나의 상태로 접어 표시하지 않는다.
 - `STALE`, `PARTIAL`, `UNAVAILABLE`, `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED`는 정상 계산값과 같은 시각 위계로 표시하지 않는다.
+- 일부 행이나 지표만 사용할 수 없고 나머지를 안전하게 표시할 수 있으면 위젯 렌더링 상태를 `PARTIAL`로, 핵심 데이터를 모두 사용할 수 없으면 `UNAVAILABLE`로 표시한다.
+- `lookup_status`는 같은 `ProviderLookupResult`의 `lookup_type`과 `target_key`로 해당 행이나 계산 입력에 연결한다.
 - 가격 또는 지수 값의 기준 시각과 시스템의 마지막 갱신 시각을 서로 대체해서 표시하지 않는다.
 - 가격·지수 스냅샷의 `captured_at`과 `data_status`는 해당 `snapshot_role`의 UI 라벨과 같은 묶음으로 표시한다.
 - `ProviderHoldingSnapshot.captured_at`은 가격·지수 기준 시각과 구분하고 provider 기반 보유 수량과 평균 매수가 가까이에 표시한다.
+- `data_status`는 `PriceSnapshot`과 `MarketIndexSnapshot`에만 적용한다. 보유 현황은 해당 `ProviderLookupResult.lookup_status`로 조회 가능 여부를 판단한다.
+- Provider 기반 평균 매수가는 `cost_basis_source`를 함께 표시하고 라벨은 `docs/ui/components.md`를 따른다.
 - 마지막 성공 갱신 시각이 있으면 상태 근처에 함께 표시한다.
 - provider 오류 상태의 자격 증명 처리는 `docs/specs/read-only-market-data-provider.md`의 비노출 경계를 따른다.
 - AI Dashboard Planner는 provider 기반 산출물에 필요한 출처와 갱신 상태를 제공하거나 보완 응답을 반환한다. 구조 유효성은 `docs/dashboard-schema-v1.md`의 검증 규칙과 백엔드·프런트엔드 validator가 판정하며, 렌더러는 `INVALID_SCHEMA`가 반환되면 위젯을 렌더링하지 않는다.

@@ -95,6 +95,14 @@ PC 대시보드의 기본 컴포넌트다.
 
 각 가격·지수 상태 배지는 같은 스냅샷의 역할 라벨과 기준 시각 근처에 표시한다. `ProviderHoldingSnapshot.captured_at`은 `보유 현황 기준`으로 표시하고 provider 기반 보유 수량과 평균 매수가 가까이에 둔다. Provider 데이터 상태 배지는 provider명, 데이터 출처, 마지막 갱신 시각과 같은 메타데이터 영역에 둔다. 둘 이상의 비정상 상태가 있으면 동시에 표시한다. 자격 증명 표시는 `docs/specs/read-only-market-data-provider.md`의 비노출 경계를 따른다.
 
+Provider 기반 평균 매수가의 원가 근거 라벨은 다음과 같이 표시한다.
+
+- `cost_basis_source=PROVIDER_REPORTED`: provider 제공 원가
+- `cost_basis_source=TRADE_LEDGER_DERIVED`: 거래 원장 계산 원가
+- `cost_basis_source=UNKNOWN`: 원가 근거 확인 필요
+
+원가 근거 라벨은 평균 매수가 가까이에 표시한다. 조회 상태의 대상명은 `lookup_type`과 `target_key`로 결정하되, 계좌 식별자 같은 내부 연결 키를 그대로 노출하지 않고 계좌 표시명, 종목명 또는 시장명처럼 안전한 라벨을 사용한다.
+
 ## 수익률 표시
 
 수익률 표시는 숫자, 방향, 기준을 함께 표현한다.
