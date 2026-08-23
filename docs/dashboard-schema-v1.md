@@ -87,7 +87,7 @@ Dashboard Schema는 원본 투자 데이터를 담지 않지만, 후속 read-onl
 
 Provider 확장 구현은 `docs/specs/stock-signal-view-data-model.md`가 소유한 `PriceSnapshot.data_status`, `MarketIndexSnapshot.data_status`, `ProviderLookupResult.lookup_status`의 허용 값과 의미를 그대로 참조해야 한다. Dashboard Schema는 이 owner 상태를 다른 이름이나 축약 상태로 재정의하지 않는다.
 
-Dashboard Schema는 `data_status`와 `lookup_status`를 별도 필드로 보존하고 검증한다. 화면 표시 위계와 배지 매핑은 `docs/widget-registry.md`와 `docs/ui/components.md`가 소유한다.
+Dashboard Schema는 `data_status`와 `lookup_status`를 별도 필드로 보존하고 검증한다. Widget Registry는 위젯의 상태 노출 조건을 소유하고, `docs/ui/components.md`는 각 상태의 표시 라벨과 배지 매핑을 소유한다.
 
 ## Widget 구조
 

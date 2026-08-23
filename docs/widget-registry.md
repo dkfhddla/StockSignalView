@@ -151,7 +151,7 @@ Provider 확장 데이터가 연결된 위젯은 Dashboard Schema의 후속 메�
 
 현재 MVP 렌더러와 스키마 검증은 provider 메타데이터 컬럼을 아직 허용하지 않는다. Provider 확장 구현 시에는 위젯 옵션 또는 별도 메타데이터 표시 영역으로 다음 상태를 노출해야 한다.
 
-허용 상태 값과 의미는 `docs/specs/stock-signal-view-data-model.md`의 `PriceSnapshot.data_status`, `MarketIndexSnapshot.data_status`, `ProviderLookupResult.lookup_status`가 소유한다. Widget Registry는 owner 상태를 화면 표시로 매핑하며 상태 자체를 재정의하지 않는다.
+허용 상태 값과 의미는 `docs/specs/stock-signal-view-data-model.md`의 `PriceSnapshot.data_status`, `MarketIndexSnapshot.data_status`, `ProviderLookupResult.lookup_status`가 소유한다. Widget Registry는 위젯이 owner 상태를 노출해야 하는 조건을 소유하며 상태 자체를 재정의하지 않는다. 표시 라벨과 배지 매핑은 `docs/ui/components.md`를 따른다.
 
 표시 기준:
 
