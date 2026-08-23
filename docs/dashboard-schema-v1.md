@@ -69,6 +69,39 @@ AI는 화면 코드를 생성하지 않는다. AI는 사용자의 질문과 투�
 - `data_requirements`: 위젯이 사용할 데이터 묶음의 요구사항이다.
 - `widgets`: 화면에 표시할 위젯 배열이다.
 
+## 데이터 메타데이터 계약
+
+Dashboard Schema는 원본 투자 데이터를 담지 않지만, 후속 read-only provider 확장에서는 각 데이터 묶음이 화면에 노출해야 하는 메타데이터 요구사항을 표현할 수 있어야 한다.
+
+현재 MVP 스키마 구현은 이 메타데이터 필드를 아직 허용하지 않는다. Provider 확장 구현 시에는 `data_requirements[*].metadata_fields` 같은 명시적 요구 필드 또는 동등한 검증 가능한 계약으로 데이터 묶음에 필요한 값을 다음 owner 필드명으로 요구해야 한다.
+
+- `provider`: 데이터를 공급한 provider 이름.
+- `provider_source_id`: provider 내부 시세 소스 또는 연동 식별자.
+- `source`: 수동, 모의, market API 같은 입력 출처.
+- `captured_at`: 가격 또는 지수 값의 기준 시각.
+- `refreshed_at`: provider 또는 내부 입력에서 마지막으로 갱신한 시각.
+- `data_status`: `PriceSnapshot` 또는 `MarketIndexSnapshot` 값의 사용 가능 상태.
+- `lookup_status`: `ProviderLookupResult`가 보존한 조회 성공 또는 실패 원인.
+
+Provider 확장 구현 시 `data_status`는 데이터 모델의 상태를 그대로 사용한다.
+
+- `AVAILABLE`: 현재 계산에 사용할 수 있는 데이터.
+- `STALE`: 값은 있으나 지연 또는 신선도 정책 확인이 필요한 데이터.
+- `UNAVAILABLE`: 값이 없어 계산에 사용할 수 없는 데이터.
+
+`lookup_status`는 데이터 모델의 공통 조회 상태를 그대로 사용한다.
+
+- `AVAILABLE`: 조회 결과를 사용할 수 있는 상태.
+- `PARTIAL`: 일부 대상 또는 일부 필드만 사용할 수 있는 상태.
+- `STALE`: 조회 결과가 지연되어 신선도 정책 확인이 필요한 상태.
+- `UNAVAILABLE`: 조회 결과가 없는 상태.
+- `UNAUTHORIZED`: provider 인증 실패 또는 만료로 재인증이 필요한 상태.
+- `FORBIDDEN`: provider 권한 부족 또는 계좌 접근 불가 상태.
+- `PROVIDER_ERROR`: provider 오류 또는 일시 장애 상태.
+- `UNSUPPORTED`: provider가 요청한 조회를 지원하지 않는 상태.
+
+스키마와 위젯은 `data_status`와 `lookup_status`를 하나의 상태로 접거나 숨기지 않아야 한다. `STALE`, `PARTIAL`, `UNAVAILABLE`, `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED` 상태를 정상 숫자처럼 표시해서는 안 된다.
+
 ## Widget 구조
 
 ```json
@@ -119,6 +152,7 @@ AI는 화면 코드를 생성하지 않는다. AI는 사용자의 질문과 투�
 - `schema_version`이 지원 버전이 아니면 거부한다.
 - `data_requirements`와 `widgets`는 각각 하나 이상의 항목을 포함해야 한다.
 - `data_requirements[*].key`는 대시보드 안에서 고유해야 한다.
+- 후속 provider 메타데이터 요구 필드가 추가되면 허용된 메타데이터 필드만 포함해야 한다.
 - `widgets[*].widget_id`는 대시보드 안에서 고유해야 한다.
 - `widgets[*].type`이 위젯 레지스트리에 없으면 거부한다.
 - `widgets[*]`는 `data_key` 또는 `data_keys` 중 하나 이상을 가져야 한다.
@@ -151,5 +185,6 @@ MVP는 AI API 연결 전에도 다음 프리셋을 Dashboard Schema로 제공해
 - `docs/widget-registry.md`
 - `docs/ai-dashboard-planner.md`
 - `docs/dynamic-view-renderer.md`
+- `docs/specs/read-only-market-data-provider.md`
 - `docs/specs/stock-signal-view-data-model.md`
 - `docs/specs/stock-signal-view-calculation-rules.md`

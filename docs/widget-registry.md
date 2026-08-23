@@ -10,6 +10,7 @@ Widget Registry는 Dashboard Schema v1에서 사용할 수 있는 위젯 타입�
 - 위젯은 주문 실행, 자동매매, 외부 API 호출을 직접 수행하지 않는다.
 - 위젯은 전달받은 데이터와 옵션만 사용한다.
 - 데이터가 부족하면 임의 값을 만들지 않고 `미산출` 또는 `데이터 부족` 상태를 표시한다.
+- provider 데이터가 연결된 위젯은 provider명, 데이터 출처, 가격 또는 지수 값의 기준 시각, 마지막 갱신 시각, 데이터 상태와 조회 상태를 숨기지 않는다.
 
 ## MVP 위젯
 
@@ -142,6 +143,40 @@ Widget Registry는 Dashboard Schema v1에서 사용할 수 있는 위젯 타입�
 - `UNAVAILABLE`: 핵심 데이터 부족.
 - `INVALID_SCHEMA`: 스키마 검증 실패.
 
+## 데이터 상태 표시
+
+Provider 확장 데이터가 연결된 위젯은 Dashboard Schema의 후속 메타데이터 계약에 따라 스냅샷의 `data_status`와 `ProviderLookupResult.lookup_status`를 구분해 표시해야 한다. MVP의 수동/모의 데이터는 현재 스키마가 허용하는 필드와 위젯 상태 안에서 출처와 갱신 맥락을 표시한다.
+
+앞 절의 공통 상태는 위젯 렌더링 상태이고, `lookup_status`는 provider 조회 상태다. 두 필드에 같은 `PARTIAL` 또는 `UNAVAILABLE` 이름이 있어도 서로 대체해서는 안 된다.
+
+현재 MVP 렌더러와 스키마 검증은 provider 메타데이터 컬럼을 아직 허용하지 않는다. Provider 확장 구현 시에는 위젯 옵션 또는 별도 메타데이터 표시 영역으로 다음 상태를 노출해야 한다.
+
+허용 `data_status`:
+
+- `AVAILABLE`: 현재 계산에 사용할 수 있음.
+- `STALE`: 마지막 성공 값을 표시할 수 있으나 최신 여부 확인이 필요함.
+- `UNAVAILABLE`: 값이 없어 계산에 사용할 수 없음.
+
+허용 `lookup_status`:
+
+- `AVAILABLE`: 조회 결과를 사용할 수 있음.
+- `PARTIAL`: 일부 대상 또는 일부 필드만 사용할 수 있음.
+- `STALE`: 조회 결과가 지연되어 신선도 정책 확인이 필요함.
+- `UNAVAILABLE`: 조회 결과가 없음.
+- `UNAUTHORIZED`: provider 인증 실패 또는 만료.
+- `FORBIDDEN`: provider 권한 부족 또는 계좌 접근 불가.
+- `PROVIDER_ERROR`: provider 오류 또는 일시 장애.
+- `UNSUPPORTED`: provider가 요청한 조회를 지원하지 않음.
+
+표시 기준:
+
+- `data_status`와 `lookup_status`를 하나의 상태로 접어 표시하지 않는다.
+- `STALE`, `PARTIAL`, `UNAVAILABLE`, `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED`는 정상 계산값과 같은 시각 위계로 표시하지 않는다.
+- 가격 또는 지수 값의 기준 시각과 시스템의 마지막 갱신 시각을 서로 대체해서 표시하지 않는다.
+- 마지막 성공 갱신 시각이 있으면 상태 근처에 함께 표시한다.
+- `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR` 상태에서 provider 자격 증명, 토큰, 원본 오류 본문을 노출하지 않는다.
+- AI 요약이나 위젯 제목은 데이터 출처와 갱신 상태를 가리면 안 된다.
+
 ## 추가 기준
 
 새 위젯을 추가하려면 다음 항목을 함께 정의한다.
@@ -150,5 +185,6 @@ Widget Registry는 Dashboard Schema v1에서 사용할 수 있는 위젯 타입�
 - 허용 데이터 타입.
 - 필수 옵션과 선택 옵션.
 - 데이터 부족 상태 처리.
+- provider 메타데이터와 데이터 상태 표시 여부.
 - PC/모바일 표시 방식.
 - 테스트 기대치.
