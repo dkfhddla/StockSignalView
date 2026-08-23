@@ -81,7 +81,6 @@ Dashboard Schema는 원본 투자 데이터를 담지 않지만, 각 데이터 �
     "attribution": {
       "provider": "Toss Securities",
       "source": "BROKER_API",
-      "captured_at": "2026-08-24T09:00:00+09:00",
       "refreshed_at": "2026-08-24T09:01:00+09:00"
     },
     "status": {
@@ -138,7 +137,7 @@ Owner 데이터 필드:
 
 Provider 데이터와 연결된 요구사항은 `provider_metadata`를 포함해야 한다. Provider 데이터가 없는 기존 로컬 `PRESET`과 `USER_SAVED` 스키마는 호환성을 위해 이를 생략할 수 있지만, `AI_PLANNER` 스키마는 모든 데이터 요구사항에 유효한 `provider_metadata`를 포함해야 한다. Planner가 출처나 갱신 시각을 확인할 수 없으면 스키마 대신 보완 응답을 반환한다. 수동·가져오기·모의 데이터에는 존재하지 않는 provider 조회 상태를 만들지 않는다.
 
-`provider_source_id`, 계좌 식별자, 원본 종목 심볼처럼 owner별로만 유효한 값은 이 공통 표시 계약에 넣지 않는다. 해당 값은 데이터 모델과 provider adapter 경계에서 보존한다. 가격 또는 지수 스냅샷을 직접 요구하는 데이터 타입을 추가할 때는 owner별 계약으로 확장해 `provider_source_id`와 `snapshot_role`을 함께 전달하고 `CURRENT`, `DAY_BASELINE`, `HOLDING_PERIOD_BASELINE`을 구분해야 한다.
+`provider_source_id`, 외부 계좌 식별자, 원본 종목 심볼처럼 owner별로만 유효하거나 민감한 원본 값은 이 공통 표시 계약에 넣지 않는다. 해당 값은 데이터 모델과 provider adapter 경계에서 보존한다. `lookup_results[*].target_key`에는 프런트엔드 라우팅에 필요한 비민감 내부 키만 전달하고, 화면에는 `target_label` 또는 조회 유형의 일반 라벨만 표시한다. 가격 또는 지수 스냅샷을 직접 요구하는 데이터 타입을 추가할 때는 owner별 계약으로 확장해 `provider_source_id`와 `snapshot_role`을 함께 전달하고 `CURRENT`, `DAY_BASELINE`, `HOLDING_PERIOD_BASELINE`을 구분해야 한다.
 
 ## Widget 구조
 

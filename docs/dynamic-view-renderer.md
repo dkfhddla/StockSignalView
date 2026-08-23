@@ -43,10 +43,10 @@ Dashboard Schema 수신
 - `data_key` 또는 `data_keys`를 실제 API 응답 또는 캐시된 계산 결과와 연결한다.
 - 여러 데이터 묶음을 쓰는 위젯은 각 `data_keys[*]`를 병합하지 않고, 위젯이 구분 가능한 입력으로 전달한다.
 - 각 데이터 요구사항의 `provider_metadata`를 같은 key로 위젯의 메타데이터 영역에 연결한다.
-- `data_status`와 `lookup_status`는 별도 배지로 전달하며 복합 비정상 상태를 동시에 표시한다.
+- `data_status`와 `lookup_results[*].lookup_status`는 별도 배지로 전달하며 복합 비정상 상태를 동시에 표시한다.
 - 데이터가 없으면 위젯에 `EMPTY` 또는 `UNAVAILABLE` 상태를 전달한다.
 - 바인딩한 provider 응답의 일부 값이나 메타데이터만 없고 나머지 값을 안전하게 표시할 수 있으면 위젯 렌더링 상태를 `PARTIAL`로 전달한다. 핵심 데이터를 모두 사용할 수 없을 때만 `UNAVAILABLE`로 전달하며, 두 경우 모두 유효한 Schema를 `INVALID_SCHEMA`로 다시 분류하지 않는다.
-- `ProviderLookupResult.lookup_status`가 있으면 위젯 렌더링 상태와 대체하지 않고 별도 provider 조회 메타데이터로 함께 전달한다. Owner snapshot을 만들 수 없는 조회 실패도 값 전용 메타데이터 없이 이 조회 상태를 전달할 수 있다.
+- `lookup_results[*].lookup_status`가 있으면 위젯 렌더링 상태와 대체하지 않고 별도 provider 조회 메타데이터로 함께 전달한다. Owner snapshot을 만들 수 없는 조회 실패도 값 전용 메타데이터 없이 이 조회 상태를 전달할 수 있다.
 - Data Binder는 보유 조회 결과의 `provider`, `lookup_type`, `target_key`, 가격·지수 조회 결과의 `provider`, `lookup_type`, `target_key`, `snapshot_role`을 사용해 `lookup_status`를 해당 행이나 계산 입력에 연결하며, 한 provider·대상·역할의 조회 실패를 다른 입력에 표시하지 않는다.
 
 ### Layout Engine
@@ -91,7 +91,7 @@ Dashboard Schema 수신
 - 미등록 위젯 타입은 화면 표시 전에 거부된다.
 - HTML 또는 스크립트처럼 보이는 문자열은 실행되지 않고 평문 또는 거부 상태로 처리된다.
 - provider명, 출처, 기준 시각과 마지막 갱신 시각이 연결된 위젯 가까이에 표시된다.
-- `data_status`와 `lookup_status`가 정상·지연·오류 조합에서도 서로를 숨기지 않는다.
+- `data_status`와 `lookup_results[*].lookup_status`가 정상·지연·오류 조합에서도 서로를 숨기지 않는다.
 - 출처가 없는 `AI_PLANNER` 스키마와 계약에 없는 provider metadata 필드는 렌더링 전에 거부된다.
 - 데이터 부족 상태가 사용자에게 이해 가능한 메시지로 표시된다.
 

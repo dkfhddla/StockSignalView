@@ -1,5 +1,6 @@
 export type Market = "KOSPI" | "KOSDAQ";
 export type AlertState = "정상" | "알림" | "데이터 부족";
+export type CostBasisSource = "PROVIDER_REPORTED" | "TRADE_LEDGER_DERIVED" | "UNKNOWN";
 
 export type Holding = {
   id: string;
@@ -8,6 +9,7 @@ export type Holding = {
   market: Market;
   quantity: number;
   averagePrice: number;
+  costBasisSource?: CostBasisSource;
   currentPrice: number | null;
   valuation: number | null;
   unrealizedProfit: number | null;

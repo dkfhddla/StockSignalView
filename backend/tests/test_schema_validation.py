@@ -17,7 +17,13 @@ def _provider_metadata() -> dict:
         },
         "status": {
             "data_status": "AVAILABLE",
-            "lookup_status": "AVAILABLE",
+            "lookup_results": [
+                {
+                    "lookup_type": "HOLDINGS",
+                    "target_key": "account-primary",
+                    "lookup_status": "AVAILABLE",
+                }
+            ],
         },
     }
 

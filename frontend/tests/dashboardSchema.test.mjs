@@ -72,7 +72,14 @@ function providerMetadata() {
     },
     status: {
       data_status: "STALE",
-      lookup_status: "UNAUTHORIZED",
+      lookup_results: [
+        {
+          lookup_type: "HOLDINGS",
+          target_key: "account-primary",
+          target_label: "주 계좌",
+          lookup_status: "UNAUTHORIZED",
+        },
+      ],
     },
   };
 }
@@ -83,15 +90,15 @@ function withProviderMetadata(metadata = providerMetadata()) {
   return schema;
 }
 
-function renderDashboard(schema) {
+function renderDashboard(schema, positions = []) {
   return renderToStaticMarkup(
     createElement(DashboardRenderer, {
       activeFilter: "전체",
       onFilterChange: () => {},
-      positions: [],
+      positions,
       schema,
       schemaSourceMessage: "테스트 스키마",
-      summaryPositions: [],
+      summaryPositions: positions,
     }),
   );
 }
@@ -131,10 +138,31 @@ test("rejects malformed provider metadata", () => {
   invalidDataStatus.status.data_status = "FRESH";
 
   const invalidLookupStatus = providerMetadata();
-  invalidLookupStatus.status.lookup_status = "ERROR";
+  invalidLookupStatus.status.lookup_results[0].lookup_status = "ERROR";
 
-  const missingProviderLookupStatus = providerMetadata();
-  delete missingProviderLookupStatus.status.lookup_status;
+  const invalidLookupType = providerMetadata();
+  invalidLookupType.status.lookup_results[0].lookup_type = "ACCOUNT";
+
+  const blankTargetKey = providerMetadata();
+  blankTargetKey.status.lookup_results[0].target_key = " ";
+
+  const nullTargetLabel = providerMetadata();
+  nullTargetLabel.status.lookup_results[0].target_label = null;
+
+  const emptyLookupResults = providerMetadata();
+  emptyLookupResults.status.lookup_results = [];
+
+  const duplicateLookupTarget = providerMetadata();
+  duplicateLookupTarget.status.lookup_results.push({
+    ...duplicateLookupTarget.status.lookup_results[0],
+  });
+
+  const missingProviderLookupResults = providerMetadata();
+  delete missingProviderLookupResults.status.lookup_results;
+
+  const legacyScalarLookupStatus = providerMetadata();
+  delete legacyScalarLookupStatus.status.lookup_results;
+  legacyScalarLookupStatus.status.lookup_status = "AVAILABLE";
 
   const missingCapturedAt = providerMetadata();
   delete missingCapturedAt.attribution.captured_at;
@@ -157,7 +185,13 @@ test("rejects malformed provider metadata", () => {
     invalidCalendarDate,
     invalidDataStatus,
     invalidLookupStatus,
-    missingProviderLookupStatus,
+    invalidLookupType,
+    blankTargetKey,
+    nullTargetLabel,
+    emptyLookupResults,
+    duplicateLookupTarget,
+    missingProviderLookupResults,
+    legacyScalarLookupStatus,
     missingCapturedAt,
     manualProviderLookupStatus,
     unsupportedStatusField,
@@ -167,7 +201,7 @@ test("rejects malformed provider metadata", () => {
   }
 });
 
-test("accepts local attribution without a provider lookup status", () => {
+test("accepts local attribution without provider lookup results", () => {
   const schema = withProviderMetadata({
     attribution: {
       provider: "StockSignalView",
@@ -201,7 +235,10 @@ test("renders provider attribution and composite status badges", () => {
   assert.match(markup, /값 기준/);
   assert.match(markup, /마지막 갱신/);
   assert.match(markup, /값 갱신 지연/);
+  assert.match(markup, /보유 조회/);
+  assert.match(markup, /주 계좌/);
   assert.match(markup, /인증 실패/);
+  assert.doesNotMatch(markup, /account-primary/);
 });
 
 test("renders every supported data and lookup status", () => {
@@ -229,9 +266,94 @@ test("renders every supported data and lookup status", () => {
 
   for (const [status, label] of Object.entries(lookupStatusLabels)) {
     const metadata = providerMetadata();
-    metadata.status.lookup_status = status;
+    metadata.status.lookup_results[0].lookup_status = status;
     assert.match(renderDashboard(withProviderMetadata(metadata)), new RegExp(label));
   }
+});
+
+test("renders each lookup result with a safe target label", () => {
+  const metadata = providerMetadata();
+  metadata.status.lookup_results.push(
+    {
+      lookup_type: "PRICE",
+      target_key: "sensitive-provider-symbol",
+      target_label: "삼성전자",
+      lookup_status: "STALE",
+    },
+    {
+      lookup_type: "MARKET_INDEX",
+      target_key: "market-kospi",
+      target_label: "KOSPI",
+      lookup_status: "PROVIDER_ERROR",
+    },
+  );
+  const markup = renderDashboard(withProviderMetadata(metadata));
+
+  assert.match(markup, /가격 조회/);
+  assert.match(markup, /삼성전자/);
+  assert.match(markup, /시장 지수 조회/);
+  assert.match(markup, /KOSPI/);
+  assert.doesNotMatch(markup, /sensitive-provider-symbol/);
+  assert.doesNotMatch(markup, /market-kospi/);
+});
+
+test("renders cost basis source beside average cost in table and cards", () => {
+  const schema = validSchema();
+  schema.widgets = [
+    {
+      widget_id: "positions-table",
+      type: "position_table",
+      title: "보유 종목",
+      data_key: "positions",
+      layout: { desktop_span: 12, mobile_order: 1 },
+      options: {
+        columns: ["stock_name", "average_cost"],
+        sort: { field: "average_cost", direction: "desc" },
+      },
+    },
+    {
+      widget_id: "positions-cards",
+      type: "position_cards",
+      title: "보유 종목 카드",
+      data_key: "positions",
+      layout: { desktop_span: 12, mobile_order: 2 },
+      options: {
+        primary_metric: "relative_return_rate",
+        show_memo_badge: false,
+        filter_strength: "ALL",
+      },
+    },
+  ];
+  const positions = [
+    ["provider", "PROVIDER_REPORTED"],
+    ["ledger", "TRADE_LEDGER_DERIVED"],
+    ["unknown", "UNKNOWN"],
+  ].map(([id, costBasisSource], index) => ({
+    id,
+    name: `테스트 종목 ${index + 1}`,
+    code: `00000${index + 1}`,
+    market: "KOSPI",
+    quantity: 1,
+    averagePrice: 10000 + index,
+    costBasisSource,
+    currentPrice: 11000,
+    valuation: 11000,
+    unrealizedProfit: 1000,
+    realizedProfit: 0,
+    stockReturn: 10,
+    marketReturn: 1,
+    relativeReturn: 9,
+    weight: 33.3,
+    favorite: false,
+    memo: "",
+    alertState: "정상",
+    dataSource: "모의 데이터",
+  }));
+  const markup = renderDashboard(schema, positions);
+
+  assert.match(markup, /provider 제공 원가/);
+  assert.match(markup, /거래 원장 계산 원가/);
+  assert.match(markup, /원가 근거 확인 필요/);
 });
 
 test("does not render unattributed AI summaries", () => {
@@ -249,12 +371,16 @@ test("renders schema strings as escaped text", () => {
   schema.title = "<script>alert('dashboard')</script>";
   schema.data_requirements[0].provider_metadata.attribution.provider =
     "<img src=x onerror=alert('provider')>";
+  schema.data_requirements[0].provider_metadata.status.lookup_results[0].target_label =
+    "<svg onload=alert('target')>";
   const markup = renderDashboard(schema);
 
   assert.doesNotMatch(markup, /<script>/);
   assert.doesNotMatch(markup, /<img/);
+  assert.doesNotMatch(markup, /<svg/);
   assert.match(markup, /&lt;script&gt;/);
   assert.match(markup, /&lt;img/);
+  assert.match(markup, /&lt;svg/);
 });
 
 test("rejects unsupported filter keys", () => {

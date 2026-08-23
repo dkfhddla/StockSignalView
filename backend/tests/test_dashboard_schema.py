@@ -16,7 +16,14 @@ def provider_metadata() -> dict:
         },
         "status": {
             "data_status": "STALE",
-            "lookup_status": "UNAUTHORIZED",
+            "lookup_results": [
+                {
+                    "lookup_type": "HOLDINGS",
+                    "target_key": "account-primary",
+                    "target_label": "주 계좌",
+                    "lookup_status": "UNAUTHORIZED",
+                }
+            ],
         },
     }
 
@@ -126,12 +133,52 @@ def test_dashboard_schema_accepts_provider_metadata(valid_dashboard_payload: dic
             "valid calendar date",
         ),
         (lambda metadata: metadata["status"].update(data_status="FRESH"), "data_status"),
-        (lambda metadata: metadata["status"].update(lookup_status="ERROR"), "lookup_status"),
-        (lambda metadata: metadata["status"].pop("lookup_status"), "require lookup_status"),
+        (
+            lambda metadata: metadata["status"]["lookup_results"][0].update(
+                lookup_status="ERROR"
+            ),
+            "lookup_status",
+        ),
+        (
+            lambda metadata: metadata["status"]["lookup_results"][0].update(
+                lookup_type="ACCOUNT"
+            ),
+            "lookup_type",
+        ),
+        (
+            lambda metadata: metadata["status"]["lookup_results"][0].update(
+                target_key=" "
+            ),
+            "string_too_short",
+        ),
+        (
+            lambda metadata: metadata["status"]["lookup_results"][0].update(
+                target_label=None
+            ),
+            "target_label must be omitted",
+        ),
+        (
+            lambda metadata: metadata["status"].update(lookup_results=[]),
+            "at least one result",
+        ),
+        (
+            lambda metadata: metadata["status"]["lookup_results"].append(
+                deepcopy(metadata["status"]["lookup_results"][0])
+            ),
+            "targets must be unique",
+        ),
+        (
+            lambda metadata: metadata["status"].pop("lookup_results"),
+            "require lookup_results",
+        ),
+        (
+            lambda metadata: metadata["status"].update(lookup_status="AVAILABLE"),
+            "extra_forbidden",
+        ),
         (lambda metadata: metadata["attribution"].pop("captured_at"), "require captured_at"),
         (
             lambda metadata: metadata["attribution"].update(source="MANUAL"),
-            "MANUAL source cannot define lookup_status",
+            "MANUAL source cannot define lookup_results",
         ),
         (lambda metadata: metadata["status"].update(error="token expired"), "extra_forbidden"),
     ],
@@ -158,6 +205,7 @@ def test_dashboard_schema_rejects_invalid_provider_metadata(
         ("provider_metadata", None),
         ("captured_at", None),
         ("data_status", None),
+        ("lookup_results", None),
     ],
 )
 def test_dashboard_schema_rejects_null_optional_provider_metadata_fields(
@@ -180,7 +228,7 @@ def test_dashboard_schema_rejects_null_optional_provider_metadata_fields(
         DashboardSchema.model_validate(payload)
 
 
-def test_dashboard_schema_accepts_local_attribution_without_lookup_status(
+def test_dashboard_schema_accepts_local_attribution_without_lookup_results(
     valid_dashboard_payload: dict,
 ) -> None:
     payload = deepcopy(valid_dashboard_payload)

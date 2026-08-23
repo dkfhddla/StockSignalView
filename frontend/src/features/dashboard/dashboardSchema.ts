@@ -20,6 +20,13 @@ export type DashboardLookupStatus =
   | "FORBIDDEN"
   | "PROVIDER_ERROR"
   | "UNSUPPORTED";
+export type DashboardLookupType = "HOLDINGS" | "PRICE" | "MARKET_INDEX";
+export type DashboardLookupResult = {
+  lookup_type: DashboardLookupType;
+  target_key: string;
+  target_label?: string;
+  lookup_status: DashboardLookupStatus;
+};
 
 export type DashboardProviderMetadata = {
   attribution: {
@@ -30,7 +37,7 @@ export type DashboardProviderMetadata = {
   };
   status: {
     data_status?: DashboardDataStatus;
-    lookup_status?: DashboardLookupStatus;
+    lookup_results?: DashboardLookupResult[];
   };
 };
 
@@ -197,6 +204,7 @@ const lookupStatuses: DashboardLookupStatus[] = [
   "PROVIDER_ERROR",
   "UNSUPPORTED",
 ];
+const lookupTypes: DashboardLookupType[] = ["HOLDINGS", "PRICE", "MARKET_INDEX"];
 
 export function validateDashboardSchema(schema: unknown): RendererStatus {
   if (!isRecord(schema)) return "INVALID_SCHEMA";
@@ -282,14 +290,24 @@ function isProviderMetadataValid(metadata: unknown): metadata is DashboardProvid
   } else if (!isAwareTimestamp(metadata.attribution.captured_at)) {
     return false;
   }
-  if (!hasOnlyOptionKeys(metadata.status, ["data_status", "lookup_status"])) return false;
-  if (metadata.status.lookup_status === undefined) {
-    if (Object.hasOwn(metadata.status, "lookup_status")) return false;
+  if (!hasOnlyOptionKeys(metadata.status, ["data_status", "lookup_results"])) return false;
+  if (metadata.status.lookup_results === undefined) {
+    if (Object.hasOwn(metadata.status, "lookup_results")) return false;
     if (["BROKER_API", "MARKET_API"].includes(metadata.attribution.source)) return false;
-  } else if (!isLookupStatus(metadata.status.lookup_status)) {
-    return false;
+  } else {
+    if (
+      !Array.isArray(metadata.status.lookup_results) ||
+      metadata.status.lookup_results.length === 0 ||
+      !metadata.status.lookup_results.every(isLookupResultValid)
+    ) {
+      return false;
+    }
+    const lookupTargets = metadata.status.lookup_results.map(
+      (result) => `${result.lookup_type}:${result.target_key.trim()}`,
+    );
+    if (!hasUniqueValues(lookupTargets)) return false;
   }
-  if (metadata.attribution.source === "MANUAL" && metadata.status.lookup_status !== undefined) {
+  if (metadata.attribution.source === "MANUAL" && metadata.status.lookup_results !== undefined) {
     return false;
   }
   if (metadata.status.data_status === undefined) {
@@ -456,6 +474,25 @@ function isDataStatus(value: unknown): value is DashboardDataStatus {
 
 function isLookupStatus(value: unknown): value is DashboardLookupStatus {
   return typeof value === "string" && lookupStatuses.includes(value as DashboardLookupStatus);
+}
+
+function isLookupResultValid(value: unknown): value is DashboardLookupResult {
+  if (!isRecord(value)) return false;
+  if (!hasOnlyOptionKeys(value, ["lookup_type", "target_key", "target_label", "lookup_status"])) {
+    return false;
+  }
+  if (!isLookupType(value.lookup_type)) return false;
+  if (typeof value.target_key !== "string" || value.target_key.trim() === "") return false;
+  if (value.target_label === undefined) {
+    if (Object.hasOwn(value, "target_label")) return false;
+  } else if (typeof value.target_label !== "string" || value.target_label.trim() === "") {
+    return false;
+  }
+  return isLookupStatus(value.lookup_status);
+}
+
+function isLookupType(value: unknown): value is DashboardLookupType {
+  return typeof value === "string" && lookupTypes.includes(value as DashboardLookupType);
 }
 
 function isAwareTimestamp(value: unknown) {

@@ -65,6 +65,12 @@ class DashboardLookupStatus(str, Enum):
     UNSUPPORTED = "UNSUPPORTED"
 
 
+class DashboardLookupType(str, Enum):
+    HOLDINGS = "HOLDINGS"
+    PRICE = "PRICE"
+    MARKET_INDEX = "MARKET_INDEX"
+
+
 class PositionTableColumn(str, Enum):
     STOCK_NAME = "stock_name"
     MARKET = "market"
@@ -122,9 +128,23 @@ class DashboardDataAttribution(StrictModel):
         return data
 
 
+class DashboardLookupResult(StrictModel):
+    lookup_type: DashboardLookupType
+    target_key: NonEmptyString
+    target_label: NonEmptyString | None = None
+    lookup_status: DashboardLookupStatus
+
+    @model_validator(mode="before")
+    @classmethod
+    def reject_null_target_label(cls, data: Any) -> Any:
+        if isinstance(data, dict) and "target_label" in data and data["target_label"] is None:
+            raise ValueError("target_label must be omitted or define a display label")
+        return data
+
+
 class DashboardProviderStatus(StrictModel):
     data_status: DashboardDataStatus | None = None
-    lookup_status: DashboardLookupStatus | None = None
+    lookup_results: list[DashboardLookupResult] | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -132,9 +152,23 @@ class DashboardProviderStatus(StrictModel):
         if isinstance(data, dict):
             if "data_status" in data and data["data_status"] is None:
                 raise ValueError("data_status must be omitted or define a supported status")
-            if "lookup_status" in data and data["lookup_status"] is None:
-                raise ValueError("lookup_status must be omitted or define a supported status")
+            if "lookup_results" in data and data["lookup_results"] is None:
+                raise ValueError("lookup_results must be omitted or define lookup results")
         return data
+
+    @model_validator(mode="after")
+    def validate_lookup_results(self) -> DashboardProviderStatus:
+        if self.lookup_results is None:
+            return self
+        if not self.lookup_results:
+            raise ValueError("lookup_results must contain at least one result")
+
+        lookup_targets = [
+            (result.lookup_type, result.target_key) for result in self.lookup_results
+        ]
+        if len(lookup_targets) != len(set(lookup_targets)):
+            raise ValueError("lookup_results targets must be unique")
+        return self
 
 
 class DashboardProviderMetadata(StrictModel):
@@ -146,14 +180,14 @@ class DashboardProviderMetadata(StrictModel):
         if (
             self.attribution.source
             in {DashboardDataSource.BROKER_API, DashboardDataSource.MARKET_API}
-            and self.status.lookup_status is None
+            and self.status.lookup_results is None
         ):
-            raise ValueError("provider API sources require lookup_status")
+            raise ValueError("provider API sources require lookup_results")
         if (
             self.attribution.source is DashboardDataSource.MANUAL
-            and self.status.lookup_status is not None
+            and self.status.lookup_results is not None
         ):
-            raise ValueError("MANUAL source cannot define lookup_status")
+            raise ValueError("MANUAL source cannot define lookup_results")
         if (
             self.status.data_status
             in {DashboardDataStatus.AVAILABLE, DashboardDataStatus.STALE}

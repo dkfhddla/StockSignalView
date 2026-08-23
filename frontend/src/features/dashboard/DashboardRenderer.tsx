@@ -3,7 +3,9 @@ import type { ReactNode } from "react";
 import {
   DashboardDataRequirement,
   DashboardDataStatus,
+  DashboardLookupResult,
   DashboardLookupStatus,
+  DashboardLookupType,
   DashboardProviderMetadata,
   DashboardProviderSource,
   DashboardSchema,
@@ -229,10 +231,15 @@ function ProviderMetadataEntry({
           </dd>
         </div>
       </dl>
-      {status.data_status || status.lookup_status ? (
+      {status.data_status || status.lookup_results ? (
         <div className="provider-statuses" aria-label="데이터 상태">
           {status.data_status ? <DataStatusBadge status={status.data_status} /> : null}
-          {status.lookup_status ? <LookupStatusBadge status={status.lookup_status} /> : null}
+          {status.lookup_results?.map((result) => (
+            <LookupResultBadge
+              key={`${result.lookup_type}:${result.target_key}`}
+              result={result}
+            />
+          ))}
         </div>
       ) : null}
     </div>
@@ -264,6 +271,12 @@ const lookupStatusLabels: Record<DashboardLookupStatus, string> = {
   UNSUPPORTED: "provider 미지원",
 };
 
+const lookupTypeLabels: Record<DashboardLookupType, string> = {
+  HOLDINGS: "보유 조회",
+  PRICE: "가격 조회",
+  MARKET_INDEX: "시장 지수 조회",
+};
+
 function DataStatusBadge({ status }: { status: DashboardDataStatus }) {
   const tone = status === "AVAILABLE" ? "normal" : status === "STALE" ? "warning" : "error";
 
@@ -280,6 +293,19 @@ function LookupStatusBadge({ status }: { status: DashboardLookupStatus }) {
   return (
     <span className={`provider-status-badge ${tone}`} title={`lookup_status: ${status}`}>
       {lookupStatusLabels[status]}
+    </span>
+  );
+}
+
+function LookupResultBadge({ result }: { result: DashboardLookupResult }) {
+  const targetLabel = result.target_label
+    ? `${lookupTypeLabels[result.lookup_type]} · ${result.target_label}`
+    : lookupTypeLabels[result.lookup_type];
+
+  return (
+    <span className="provider-lookup-result">
+      <span className="provider-lookup-target">{targetLabel}</span>
+      <LookupStatusBadge status={result.lookup_status} />
     </span>
   );
 }
