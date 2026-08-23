@@ -1,51 +1,62 @@
-# StockSignalView Agent Guide
+# StockSignalView 에이전트 안내
 
-## Overview
+## 개요
 
-StockSignalView is a documentation-first project for an investment operations system that turns trade records, investment notes, and market-relative performance into AI-generated dynamic dashboards. The repository includes a React/Vite Dashboard Schema renderer and a FastAPI default-dashboard backend slice; the remaining MVP services are still planned.
+StockSignalView는 거래 기록, 투자 노트, 시장 대비 성과를 AI가 생성하는 동적
+대시보드로 전환하는 투자 운영 시스템을 문서 우선으로 설계하는 프로젝트입니다.
+저장소에는 React/Vite Dashboard Schema 렌더러와 FastAPI 기본 대시보드
+백엔드 슬라이스가 구현되어 있으며, 나머지 MVP 서비스는 계획 단계입니다.
 
-## Golden Path
+## 언어 사용 원칙
 
-The intended end-to-end product flow is:
+대화와 설명 본문은 한국어를 우선하되, 기계 인식과 의미 보존에 필요한 영어는
+허용합니다. 자세한 허용 범위와 리뷰 예외는
+`docs/agents/communication-language.md`를 따릅니다.
+
+## 핵심 흐름
+
+의도한 전체 제품 흐름은 다음과 같습니다.
 
 ```text
-Trade record
--> investment note
--> performance and relative-return calculation
--> AI question or preset selection
--> Dashboard Schema generation
--> validated dynamic dashboard rendering
--> alerts and later external integrations
+거래 기록
+-> 투자 노트
+-> 성과 및 상대수익률 계산
+-> AI 질문 또는 프리셋 선택
+-> Dashboard Schema 생성
+-> 검증된 동적 대시보드 렌더링
+-> 알림 및 이후 외부 연동
 ```
 
-## Where To Start
+## 시작 문서
 
-- Read `README.md` for project intent and current scope.
-- Read `MAP.md` to find the owning path for any topic.
-- Read `docs/guidelines/documentation-standard.md` before adding or moving durable docs.
-- Read `CONTRIBUTING.md` for repository contribution rules.
-- Read `WORKFLOW.md` for the standard execution flow.
-- Read `docs/product-requirements/stock-signal-view.md` for product scope.
-- Read `docs/specs/mvp-foundation.md` for MVP behavior and acceptance criteria.
-- Read `docs/arch/overview.md` for system shape and boundaries.
+- 프로젝트 의도와 현재 범위는 `README.md`에서 확인합니다.
+- 주제별 소유 경로는 `MAP.md`에서 찾습니다.
+- 영속 문서를 추가하거나 이동하기 전에
+  `docs/guidelines/documentation-standard.md`를 읽습니다.
+- 저장소 기여 규칙은 `CONTRIBUTING.md`를 따릅니다.
+- 표준 실행 흐름은 `WORKFLOW.md`를 따릅니다.
+- 제품 범위는 `docs/product-requirements/stock-signal-view.md`에서 확인합니다.
+- MVP 동작과 수용 기준은 `docs/specs/mvp-foundation.md`에서 확인합니다.
+- 시스템 구조와 경계는 `docs/arch/overview.md`에서 확인합니다.
 
-## Repo Map
+## 저장소 지도
 
-- `README.md`: project landing page.
-- `MAP.md`: canonical repository navigation index.
-- `CONTRIBUTING.md`: repository contribution rules.
-- `WORKFLOW.md`: repository execution flow.
-- `docs/product-requirements/`: product intent and success criteria.
-- `docs/specs/`: behavior specs and calculation rules.
-- `docs/arch/`: current architecture and runtime boundaries.
-- `docs/adr/`: durable technical decisions and rationale.
-- `docs/agents/`: detailed operating conventions and engineering-skill configuration for agents.
-- `docs/guidelines/`: repository rules, including documentation policy.
-- `docs/*.md`: top-level dashboard engine contracts such as schema, widget registry, planner, and renderer.
+- `README.md`: 프로젝트 소개 진입점입니다.
+- `MAP.md`: 저장소의 기준 탐색 색인입니다.
+- `CONTRIBUTING.md`: 저장소 기여 규칙입니다.
+- `WORKFLOW.md`: 저장소 실행 흐름입니다.
+- `docs/product-requirements/`: 제품 의도와 성공 기준입니다.
+- `docs/specs/`: 동작 명세와 계산 규칙입니다.
+- `docs/arch/`: 현재 아키텍처와 런타임 경계입니다.
+- `docs/adr/`: 영속적인 기술 결정과 근거입니다.
+- `docs/agents/`: 에이전트의 상세 운영 규칙과 공학 스킬 설정입니다.
+- `docs/guidelines/`: 문서 정책을 포함한 저장소 규칙입니다.
+- `docs/*.md`: 스키마, 위젯 레지스트리, 플래너, 렌더러 등 대시보드 엔진의
+  최상위 계약입니다.
 
-## Commands
+## 명령어
 
-Useful commands for the current implementation stage:
+현재 구현 단계에서 유용한 명령어는 다음과 같습니다.
 
 - `rg --files`
 - `rg "<term>" docs README.md MAP.md AGENTS.md`
@@ -54,12 +65,15 @@ Useful commands for the current implementation stage:
 - `cd backend && python -m pytest -q`
 - `cd backend && python -m uvicorn app.main:app`
 
-## Documentation Rules
+## 문서 규칙
 
-- Keep root docs short and navigational.
-- Update `MAP.md` in the same change whenever durable doc locations move.
-- Put product behavior in `docs/specs/`, architecture in `docs/arch/`, decisions in `docs/adr/`, reusable repo rules in `docs/guidelines/`, and detailed agent operating conventions in `docs/agents/`.
-- Keep dashboard engine contracts in the owning top-level docs unless a future reorganization gives them a clearer dedicated area.
+- 루트 문서는 짧은 탐색 문서로 유지합니다.
+- 영속 문서의 위치를 옮기면 같은 변경에서 `MAP.md`를 갱신합니다.
+- 제품 동작은 `docs/specs/`, 아키텍처는 `docs/arch/`, 결정은 `docs/adr/`,
+  재사용 가능한 저장소 규칙은 `docs/guidelines/`, 에이전트 상세 운영 규칙은
+  `docs/agents/`에 둡니다.
+- 대시보드 엔진 계약은 더 명확한 전용 영역이 생기기 전까지 각 계약을 소유한
+  최상위 문서에 유지합니다.
 
 ## 문서 분류 원칙
 
@@ -75,7 +89,7 @@ Useful commands for the current implementation stage:
 
 ## Agent skills
 
-### Contribution conventions
+### Git workflow
 
 커밋, 브랜치, Merge Request 작성 및 이슈 연계 규칙은
 `docs/agents/contribution-conventions.md`를 따른다.

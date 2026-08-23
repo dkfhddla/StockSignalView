@@ -7,6 +7,8 @@
 - If root navigation changed, was `AGENTS.md` updated?
 - Does `AGENTS.md` keep only an agent-critical summary and link while the
   detailed rule lives in one `docs/agents/` topic document?
+- 언어 사용을 `docs/agents/communication-language.md`에 따라 검토하고, 허용된
+  고정 제목을 `hard violation`으로 분류하지 않았는가?
 - If top-level project framing changed, does `README.md` still match?
 - Do any two docs now describe the same rule differently?
 - If validation or calculation rules changed, do related specs still agree?

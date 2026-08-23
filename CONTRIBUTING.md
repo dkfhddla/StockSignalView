@@ -26,6 +26,8 @@ Use the owning document before changing or adding durable documentation.
 - `AGENTS.md` owns the repository starting path for agents and engineers.
 - `MAP.md` owns repository navigation and answers "where is X?"
 - `README.md` is a landing page, not a canonical source of truth.
+- `docs/agents/communication-language.md`는 저장소 범위의 언어 정책과 리뷰
+  예외를 소유한다.
 - `docs/agents/contribution-conventions.md` owns the exact commit, branch,
   merge-request, and issue-linking formats used by coding agents.
 - `docs/guidelines/documentation-standard.md` owns documentation placement and update policy.

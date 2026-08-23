@@ -44,6 +44,7 @@
 - `docs/arch/backend-architecture-slices.md`: FastAPI 백엔드의 API, 서비스, 모델, 작업 경계를 기록한다.
 - `docs/adr/`: 되돌리기 어려운 기술 선택과 주요 설계 결정을 기록한다.
 - `docs/agents/`: 에이전트의 상세 운영 규칙과 공학 스킬 설정을 기록한다.
+- `docs/agents/communication-language.md`: 한국어 우선 원칙, 영어 허용 범위, 코드 리뷰 예외를 기록한다.
 - `docs/agents/contribution-conventions.md`: 커밋, 브랜치, Merge Request 작성 및 이슈 연계 규칙을 기록한다.
 - `docs/guidelines/`: 저장소 규칙, 문서 정책, 리뷰 체크리스트를 기록한다.
 - `docs/guidelines/mvp-verification-strategy.md`: MVP 기능별 검증 계층, 자동화 우선순위, 수동 검사 한계를 기록한다.

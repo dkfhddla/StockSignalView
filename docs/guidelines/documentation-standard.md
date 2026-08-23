@@ -217,6 +217,7 @@ Use for:
 - commit, branch, and review-request formatting conventions
 - issue-tracker and triage-label mappings
 - domain-document consumption rules
+- 저장소 범위의 언어 사용 규칙과 리뷰 예외
 - topic-specific instructions linked from `AGENTS.md`
 
 Keep only a short summary and link in `AGENTS.md`. Do not duplicate the full

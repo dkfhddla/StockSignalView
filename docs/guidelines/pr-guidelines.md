@@ -43,6 +43,9 @@ This document does not restate that template.
 
 ## Review Expectations
 
+문장과 제목을 리뷰할 때는 `docs/agents/communication-language.md`를 적용한다.
+이 문서에 정의된 고정 기술 제목은 `hard violation`이 아닌 허용 예외다.
+
 Review should focus on:
 
 - behavioral regressions
