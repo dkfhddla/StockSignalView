@@ -38,6 +38,7 @@ This standard gives the repository one consistent answer to:
 - `docs/specs/`: intended behavior, rules, flows, acceptance criteria, and validation expectations.
 - `docs/arch/`: current system shape, boundaries, data flow, and runtime structure.
 - `docs/adr/`: durable technical decisions and their rationale.
+- `docs/agents/`: detailed agent operating conventions and engineering-skill configuration.
 - `docs/guidelines/`: reusable repository rules and norms.
 - Top-level `docs/*.md`: dashboard engine contracts that currently act as first-class owned surfaces in this repository.
 
@@ -50,6 +51,7 @@ This repository must keep:
 - `docs/arch/`
 - `docs/specs/`
 - `docs/adr/`
+- `docs/agents/`
 - `docs/guidelines/`
 
 This repository should keep:
@@ -204,6 +206,22 @@ Use for:
 - engineering conventions
 - testing or verification norms
 
+### 5.9 `docs/agents/`
+
+Purpose:
+Store detailed operating conventions and per-repository configuration that
+coding agents must follow.
+
+Use for:
+
+- commit, branch, and review-request formatting conventions
+- issue-tracker and triage-label mappings
+- domain-document consumption rules
+- topic-specific instructions linked from `AGENTS.md`
+
+Keep only a short summary and link in `AGENTS.md`. Do not duplicate the full
+rule in both locations.
+
 ## 6) StockSignalView-specific routing rules
 
 Use this routing table when adding or editing docs:
@@ -215,6 +233,7 @@ Use this routing table when adding or editing docs:
 - "What should the system do?" -> `docs/specs/`
 - "How is the current system shaped?" -> `docs/arch/`
 - "Why did we choose this technical direction?" -> `docs/adr/`
+- "What detailed operating convention or skill configuration should an agent follow?" -> `docs/agents/`
 - "What are the reusable repository rules?" -> `docs/guidelines/`
 - "What is the Dashboard Schema / Widget Registry / Planner / Renderer contract?" -> the owning top-level `docs/*.md` contract file
 
@@ -236,6 +255,8 @@ At minimum:
 - changing root navigation expectations requires an `AGENTS.md` update
 - changing project framing or top-level scope may require a `README.md` update
 - changing architecture decisions may require an ADR update or a new ADR
+- changing detailed agent operating conventions requires updating the owning
+  `docs/agents/` document and its summary link in `AGENTS.md`
 
 ## 8) Writing rules
 

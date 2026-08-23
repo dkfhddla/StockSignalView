@@ -5,6 +5,8 @@
 - Does the change update the owning doc for the behavior, boundary, or policy it changes?
 - If a canonical doc moved or a new canonical doc was added, was `MAP.md` updated?
 - If root navigation changed, was `AGENTS.md` updated?
+- Does `AGENTS.md` keep only an agent-critical summary and link while the
+  detailed rule lives in one `docs/agents/` topic document?
 - If top-level project framing changed, does `README.md` still match?
 - Do any two docs now describe the same rule differently?
 - If validation or calculation rules changed, do related specs still agree?

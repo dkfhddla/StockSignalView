@@ -6,8 +6,9 @@ This document defines how pull requests should be prepared, reviewed, updated,
 and considered merge-ready in StockSignalView.
 
 `CONTRIBUTING.md` owns repository-wide contribution rules. `WORKFLOW.md` owns
-the step-by-step execution flow. This document owns pull-request-specific
-operating guidance.
+the step-by-step execution flow. This document owns PR preparation, review,
+update, and merge-readiness guidance. Exact commit, branch, Merge Request, and
+issue-linking formats belong to `docs/agents/contribution-conventions.md`.
 
 ## When To Open A PR
 
@@ -36,21 +37,9 @@ Before opening a PR, confirm:
 
 ## PR Description Rules
 
-Every PR description should cover:
-
-- what changed
-- why it changed
-- which owner docs were updated
-- how the change was verified
-- what remains risky, incomplete, or intentionally deferred
-
-Preferred shape:
-
-- Summary
-- Scope
-- Documentation impact
-- Verification
-- Residual risks
+Follow `docs/agents/contribution-conventions.md` for the exact title, body
+sections, line-length limit, verification record, and issue-linking format.
+This document does not restate that template.
 
 ## Review Expectations
 

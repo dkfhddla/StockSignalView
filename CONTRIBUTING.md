@@ -26,9 +26,12 @@ Use the owning document before changing or adding durable documentation.
 - `AGENTS.md` owns the repository starting path for agents and engineers.
 - `MAP.md` owns repository navigation and answers "where is X?"
 - `README.md` is a landing page, not a canonical source of truth.
+- `docs/agents/contribution-conventions.md` owns the exact commit, branch,
+  merge-request, and issue-linking formats used by coding agents.
 - `docs/guidelines/documentation-standard.md` owns documentation placement and update policy.
 - `docs/guidelines/documentation-checklists.md` owns fast review and gardening checks.
-- `docs/guidelines/pr-guidelines.md` owns PR-specific operating guidance.
+- `docs/guidelines/pr-guidelines.md` owns PR preparation, review, update, and
+  merge-readiness guidance.
 - `docs/product-requirements/` owns product intent, scope, and success criteria.
 - `docs/specs/` owns intended behavior, rules, and acceptance criteria.
 - `docs/arch/` owns current system structure and boundary descriptions.
@@ -52,16 +55,9 @@ conflict instead of adding a third explanation.
 
 ## Branch And Commit Rules
 
-- Use a focused branch per workstream.
-- Name branches so the work type, project, and work area are obvious.
-- Prefer branch prefixes by change type:
-  - `doc/` for documentation work
-  - `feat/` for new functionality
-  - `fix/` for bug fixes
-- Keep unrelated work off the same branch.
-- Use normal follow-up commits when responding to review on an already shared branch.
-- Do not rewrite reviewed history unless the user or repository workflow explicitly requires it.
-- Keep commit scope aligned with the owning document or implementation area being changed.
+Follow `docs/agents/contribution-conventions.md` for the exact commit and branch
+format. That file is the single source of truth for agent-executed naming and
+formatting rules.
 
 ## Documentation Update Triggers
 
@@ -83,6 +79,8 @@ Update the owning docs in the same change when you alter:
   - owner: `AGENTS.md`
 - landing-page framing or top-level doc links
   - owner: `README.md`
+- exact agent-executed commit, branch, merge-request, or issue-linking formats
+  - owner: `docs/agents/contribution-conventions.md`
 - reusable documentation or contribution rules
   - owner: `docs/guidelines/`
 
