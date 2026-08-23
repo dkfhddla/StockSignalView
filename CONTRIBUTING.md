@@ -28,12 +28,12 @@ Use the owning document before changing or adding durable documentation.
 - `README.md` is a landing page, not a canonical source of truth.
 - `docs/agents/communication-language.md`는 저장소 범위의 언어 정책과 리뷰
   예외를 소유한다.
-- `docs/agents/contribution-conventions.md` owns the exact commit, branch,
-  merge-request, and issue-linking formats used by coding agents.
+- `docs/agents/contribution-conventions.md`는 코딩 에이전트가 사용하는 정확한
+  커밋, 브랜치, Merge Request, 이슈 연계 형식을 소유한다.
 - `docs/guidelines/documentation-standard.md` owns documentation placement and update policy.
 - `docs/guidelines/documentation-checklists.md` owns fast review and gardening checks.
-- `docs/guidelines/pr-guidelines.md` owns PR preparation, review, update, and
-  merge-readiness guidance.
+- `docs/guidelines/pr-guidelines.md`는 PR 준비, 리뷰, 업데이트, 병합 준비 기준을
+  소유한다.
 - `docs/product-requirements/` owns product intent, scope, and success criteria.
 - `docs/specs/` owns intended behavior, rules, and acceptance criteria.
 - `docs/arch/` owns current system structure and boundary descriptions.
@@ -57,9 +57,8 @@ conflict instead of adding a third explanation.
 
 ## Branch And Commit Rules
 
-Follow `docs/agents/contribution-conventions.md` for the exact commit and branch
-format. That file is the single source of truth for agent-executed naming and
-formatting rules.
+정확한 커밋 및 브랜치 형식은 `docs/agents/contribution-conventions.md`를
+따른다. 해당 문서는 에이전트가 실행하는 명명·형식 규칙의 단일 기준이다.
 
 ## Documentation Update Triggers
 
@@ -81,7 +80,7 @@ Update the owning docs in the same change when you alter:
   - owner: `AGENTS.md`
 - landing-page framing or top-level doc links
   - owner: `README.md`
-- exact agent-executed commit, branch, merge-request, or issue-linking formats
+- 에이전트가 실행하는 정확한 커밋, 브랜치, Merge Request, 이슈 연계 형식
   - owner: `docs/agents/contribution-conventions.md`
 - reusable documentation or contribution rules
   - owner: `docs/guidelines/`
