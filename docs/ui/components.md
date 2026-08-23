@@ -62,14 +62,16 @@ PC 대시보드의 기본 컴포넌트다.
 - 알림
 - 데이터 부족
 - 모의 데이터
-- 갱신 지연
+- 값 갱신 지연
+- 조회 지연
+- 조회 결과 없음
 - 일부 데이터
 - 인증 실패
 - 권한 없음
 - provider 오류
 - provider 미지원
 
-Provider 데이터 상태 배지는 provider명, 데이터 출처, 값의 기준 시각, 마지막 갱신 시각 근처에 표시한다. `UNAUTHORIZED`는 인증 실패, `FORBIDDEN`은 권한 없음, `PROVIDER_ERROR`는 provider 오류, `UNSUPPORTED`는 provider 미지원으로 표시한다. 인증 실패나 provider 오류를 표시할 때 사용자 API 키, 토큰, 원본 오류 본문은 노출하지 않는다.
+Provider 데이터 상태 배지는 provider명, 데이터 출처, 값의 기준 시각, 마지막 갱신 시각 근처에 표시한다. 스냅샷의 `data_status=STALE`은 값 갱신 지연, `ProviderLookupResult.lookup_status=STALE`은 조회 지연, `lookup_status=UNAVAILABLE`은 조회 결과 없음으로 구분한다. `UNAUTHORIZED`는 인증 실패, `FORBIDDEN`은 권한 없음, `PROVIDER_ERROR`는 provider 오류, `UNSUPPORTED`는 provider 미지원으로 표시한다. 둘 이상의 비정상 상태가 있으면 동시에 표시한다. 민감 정보 표시는 `docs/specs/read-only-market-data-provider.md`의 자격 증명·오류 비노출 경계를 따른다.
 
 ## 수익률 표시
 

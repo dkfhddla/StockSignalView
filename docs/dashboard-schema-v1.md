@@ -85,22 +85,7 @@ Dashboard Schema는 원본 투자 데이터를 담지 않지만, 후속 read-onl
 
 예를 들어 `provider_source_id`는 가격 또는 지수 스냅샷 데이터 묶음에만 적용한다. 보유 현황 데이터 묶음은 `ProviderHoldingSnapshot`의 `external_account_id`, `raw_provider_symbol`, `raw_market`처럼 해당 owner 모델에 정의된 필드를 사용한다.
 
-Provider 확장 구현 시 `data_status`는 데이터 모델의 상태를 그대로 사용한다.
-
-- `AVAILABLE`: 현재 계산에 사용할 수 있는 데이터.
-- `STALE`: 값은 있으나 지연 또는 신선도 정책 확인이 필요한 데이터.
-- `UNAVAILABLE`: 값이 없어 계산에 사용할 수 없는 데이터.
-
-`lookup_status`는 데이터 모델의 공통 조회 상태를 그대로 사용한다.
-
-- `AVAILABLE`: 조회 결과를 사용할 수 있는 상태.
-- `PARTIAL`: 일부 대상 또는 일부 필드만 사용할 수 있는 상태.
-- `STALE`: 조회 결과가 지연되어 신선도 정책 확인이 필요한 상태.
-- `UNAVAILABLE`: 조회 결과가 없는 상태.
-- `UNAUTHORIZED`: provider 인증 실패 또는 만료로 재인증이 필요한 상태.
-- `FORBIDDEN`: provider 권한 부족 또는 계좌 접근 불가 상태.
-- `PROVIDER_ERROR`: provider 오류 또는 일시 장애 상태.
-- `UNSUPPORTED`: provider가 요청한 조회를 지원하지 않는 상태.
+Provider 확장 구현은 `docs/specs/stock-signal-view-data-model.md`가 소유한 `PriceSnapshot.data_status`, `MarketIndexSnapshot.data_status`, `ProviderLookupResult.lookup_status`의 허용 값과 의미를 그대로 참조해야 한다. Dashboard Schema는 이 owner 상태를 다른 이름이나 축약 상태로 재정의하지 않는다.
 
 스키마와 위젯은 `data_status`와 `lookup_status`를 하나의 상태로 접거나 숨기지 않아야 한다. `STALE`, `PARTIAL`, `UNAVAILABLE`, `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED` 상태를 정상 숫자처럼 표시해서는 안 된다.
 
@@ -155,6 +140,7 @@ Provider 확장 구현 시 `data_status`는 데이터 모델의 상태를 그대
 - `data_requirements`와 `widgets`는 각각 하나 이상의 항목을 포함해야 한다.
 - `data_requirements[*].key`는 대시보드 안에서 고유해야 한다.
 - 후속 provider 메타데이터 요구 필드가 추가되면 허용된 메타데이터 필드만 포함해야 한다.
+- 후속 provider 메타데이터 계약이 추가된 뒤 provider 기반 위젯이나 AI 요약에 필수 출처 또는 갱신 상태가 없거나 유효하지 않으면 스키마를 거부한다.
 - `widgets[*].widget_id`는 대시보드 안에서 고유해야 한다.
 - `widgets[*].type`이 위젯 레지스트리에 없으면 거부한다.
 - `widgets[*]`는 `data_key` 또는 `data_keys` 중 하나 이상을 가져야 한다.

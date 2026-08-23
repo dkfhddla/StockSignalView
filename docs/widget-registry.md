@@ -151,22 +151,7 @@ Provider 확장 데이터가 연결된 위젯은 Dashboard Schema의 후속 메�
 
 현재 MVP 렌더러와 스키마 검증은 provider 메타데이터 컬럼을 아직 허용하지 않는다. Provider 확장 구현 시에는 위젯 옵션 또는 별도 메타데이터 표시 영역으로 다음 상태를 노출해야 한다.
 
-허용 `data_status`:
-
-- `AVAILABLE`: 현재 계산에 사용할 수 있음.
-- `STALE`: 마지막 성공 값을 표시할 수 있으나 최신 여부 확인이 필요함.
-- `UNAVAILABLE`: 값이 없어 계산에 사용할 수 없음.
-
-허용 `lookup_status`:
-
-- `AVAILABLE`: 조회 결과를 사용할 수 있음.
-- `PARTIAL`: 일부 대상 또는 일부 필드만 사용할 수 있음.
-- `STALE`: 조회 결과가 지연되어 신선도 정책 확인이 필요함.
-- `UNAVAILABLE`: 조회 결과가 없음.
-- `UNAUTHORIZED`: provider 인증 실패 또는 만료.
-- `FORBIDDEN`: provider 권한 부족 또는 계좌 접근 불가.
-- `PROVIDER_ERROR`: provider 오류 또는 일시 장애.
-- `UNSUPPORTED`: provider가 요청한 조회를 지원하지 않음.
+허용 상태 값과 의미는 `docs/specs/stock-signal-view-data-model.md`의 `PriceSnapshot.data_status`, `MarketIndexSnapshot.data_status`, `ProviderLookupResult.lookup_status`가 소유한다. Widget Registry는 owner 상태를 화면 표시로 매핑하며 상태 자체를 재정의하지 않는다.
 
 표시 기준:
 
@@ -174,8 +159,9 @@ Provider 확장 데이터가 연결된 위젯은 Dashboard Schema의 후속 메�
 - `STALE`, `PARTIAL`, `UNAVAILABLE`, `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED`는 정상 계산값과 같은 시각 위계로 표시하지 않는다.
 - 가격 또는 지수 값의 기준 시각과 시스템의 마지막 갱신 시각을 서로 대체해서 표시하지 않는다.
 - 마지막 성공 갱신 시각이 있으면 상태 근처에 함께 표시한다.
-- `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR` 상태에서 provider 자격 증명, 토큰, 원본 오류 본문을 노출하지 않는다.
-- AI 요약이나 위젯 제목은 데이터 출처와 갱신 상태를 가리면 안 된다.
+- provider 오류 상태의 민감 정보 처리는 `docs/specs/read-only-market-data-provider.md`의 자격 증명·오류 비노출 경계를 따른다.
+- 후속 provider 메타데이터 계약이 적용된 provider 기반 AI 요약이나 위젯에 필수 출처 또는 갱신 상태가 없거나 유효하지 않으면 `INVALID_SCHEMA`로 처리하고 렌더링하지 않는다.
+- AI 요약이나 위젯 제목은 유효한 데이터 출처와 갱신 상태를 가리면 안 된다.
 
 ## 추가 기준
 
