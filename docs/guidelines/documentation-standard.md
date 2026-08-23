@@ -38,6 +38,7 @@ This standard gives the repository one consistent answer to:
 - `docs/specs/`: intended behavior, rules, flows, acceptance criteria, and validation expectations.
 - `docs/arch/`: current system shape, boundaries, data flow, and runtime structure.
 - `docs/adr/`: durable technical decisions and their rationale.
+- `docs/agents/`: 에이전트의 상세 운영 규칙과 공학 스킬 설정.
 - `docs/guidelines/`: reusable repository rules and norms.
 - Top-level `docs/*.md`: dashboard engine contracts that currently act as first-class owned surfaces in this repository.
 
@@ -50,6 +51,7 @@ This repository must keep:
 - `docs/arch/`
 - `docs/specs/`
 - `docs/adr/`
+- `docs/agents/`
 - `docs/guidelines/`
 
 This repository should keep:
@@ -204,6 +206,22 @@ Use for:
 - engineering conventions
 - testing or verification norms
 
+### 5.9 `docs/agents/`
+
+목적:
+코딩 에이전트가 따라야 할 상세 운영 규칙과 저장소별 설정을 보관한다.
+
+용도:
+
+- 커밋, 브랜치, 리뷰 요청 형식 규칙
+- 이슈 트래커와 트리아지 라벨 매핑
+- 도메인 문서 사용 규칙
+- 저장소 범위의 언어 사용 규칙과 리뷰 예외
+- `AGENTS.md`에서 연결하는 주제별 상세 지침
+
+`AGENTS.md`와 주제별 상세 문서 사이의 분류·명명·중복 방지 규칙은
+`docs/agents/document-classification.md`를 따른다.
+
 ## 6) StockSignalView-specific routing rules
 
 Use this routing table when adding or editing docs:
@@ -215,6 +233,7 @@ Use this routing table when adding or editing docs:
 - "What should the system do?" -> `docs/specs/`
 - "How is the current system shaped?" -> `docs/arch/`
 - "Why did we choose this technical direction?" -> `docs/adr/`
+- "에이전트가 따라야 할 상세 운영 규칙이나 스킬 설정은 어디에 있는가?" -> `docs/agents/`
 - "What are the reusable repository rules?" -> `docs/guidelines/`
 - "What is the Dashboard Schema / Widget Registry / Planner / Renderer contract?" -> the owning top-level `docs/*.md` contract file
 
@@ -236,6 +255,8 @@ At minimum:
 - changing root navigation expectations requires an `AGENTS.md` update
 - changing project framing or top-level scope may require a `README.md` update
 - changing architecture decisions may require an ADR update or a new ADR
+- 에이전트 상세 운영 규칙을 변경하면 해당 `docs/agents/` 문서와
+  `AGENTS.md`의 요약 링크를 함께 갱신한다.
 
 ## 8) Writing rules
 

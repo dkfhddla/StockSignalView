@@ -26,9 +26,14 @@ Use the owning document before changing or adding durable documentation.
 - `AGENTS.md` owns the repository starting path for agents and engineers.
 - `MAP.md` owns repository navigation and answers "where is X?"
 - `README.md` is a landing page, not a canonical source of truth.
+- `docs/agents/communication-language.md`는 저장소 범위의 언어 정책과 리뷰
+  예외를 소유한다.
+- `docs/agents/contribution-conventions.md`는 코딩 에이전트가 사용하는 정확한
+  커밋, 브랜치, Merge Request, 이슈 연계 형식을 소유한다.
 - `docs/guidelines/documentation-standard.md` owns documentation placement and update policy.
 - `docs/guidelines/documentation-checklists.md` owns fast review and gardening checks.
-- `docs/guidelines/pr-guidelines.md` owns PR-specific operating guidance.
+- `docs/guidelines/pr-guidelines.md`는 PR 준비, 리뷰, 업데이트, 병합 준비 기준을
+  소유한다.
 - `docs/product-requirements/` owns product intent, scope, and success criteria.
 - `docs/specs/` owns intended behavior, rules, and acceptance criteria.
 - `docs/arch/` owns current system structure and boundary descriptions.
@@ -52,16 +57,8 @@ conflict instead of adding a third explanation.
 
 ## Branch And Commit Rules
 
-- Use a focused branch per workstream.
-- Name branches so the work type, project, and work area are obvious.
-- Prefer branch prefixes by change type:
-  - `doc/` for documentation work
-  - `feat/` for new functionality
-  - `fix/` for bug fixes
-- Keep unrelated work off the same branch.
-- Use normal follow-up commits when responding to review on an already shared branch.
-- Do not rewrite reviewed history unless the user or repository workflow explicitly requires it.
-- Keep commit scope aligned with the owning document or implementation area being changed.
+정확한 커밋 및 브랜치 형식은 `docs/agents/contribution-conventions.md`를
+따른다. 해당 문서는 에이전트가 실행하는 명명·형식 규칙의 단일 기준이다.
 
 ## Documentation Update Triggers
 
@@ -83,6 +80,8 @@ Update the owning docs in the same change when you alter:
   - owner: `AGENTS.md`
 - landing-page framing or top-level doc links
   - owner: `README.md`
+- 에이전트가 실행하는 정확한 커밋, 브랜치, Merge Request, 이슈 연계 형식
+  - owner: `docs/agents/contribution-conventions.md`
 - reusable documentation or contribution rules
   - owner: `docs/guidelines/`
 
