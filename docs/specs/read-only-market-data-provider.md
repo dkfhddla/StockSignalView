@@ -173,7 +173,7 @@ Dashboard Schema와 Widget Registry의 상태 표시 계약이 확장된 뒤 대
 - `backend/tests`: 당일 상대성과 기준 입력이 없거나 기준 시각 정책이 맞지 않을 때 provider 현재가만으로 값을 추정하지 않고 `UNAVAILABLE` 또는 `미산출` 상태를 반환하는지 검증한다.
 - `backend/tests`: 보유 기간 상대성과 기준 입력이 없을 때 provider 현재가만으로 값을 추정하지 않고 `UNAVAILABLE` 또는 `미산출` 상태를 반환하는지 검증한다.
 - `backend/tests` 또는 계약 테스트: Dashboard Schema/Widget Registry 후속 확장 전에는 provider-derived fields가 schema validation을 우회하거나 현재 Dashboard Schema v1이 허용하지 않는 필드로 emit되지 않는지 검증한다.
-- `frontend`: Dashboard Schema와 Widget Registry 후속 계약 확장 뒤 provider명, 기준 시각, 마지막 갱신 시각, `data_status`의 `STALE`/`UNAVAILABLE`과 `lookup_status`의 `PARTIAL`/`UNAUTHORIZED`/`FORBIDDEN`/`PROVIDER_ERROR`/`UNSUPPORTED` 상태가 구분되어 표시되는지 검증한다.
+- `frontend`: Dashboard Schema와 Widget Registry 후속 계약 확장 뒤 provider명, 기준 시각, 마지막 갱신 시각, `data_status`의 `STALE`/`UNAVAILABLE`과 `lookup_status`의 `PARTIAL`/`STALE`/`UNAVAILABLE`/`UNAUTHORIZED`/`FORBIDDEN`/`PROVIDER_ERROR`/`UNSUPPORTED` 상태가 독립적으로 표시되고 복합 상태에서 서로를 숨기지 않는지 검증한다.
 - `frontend`: 유효하지 않은 Dashboard Schema 또는 출처 없는 AI 요약이 렌더링되지 않는지 검증한다.
 - 문서 리뷰: 기존 외부 API 없는 MVP 범위와 read-only provider 확장 범위가 충돌하지 않는지 확인한다.
 

@@ -73,7 +73,7 @@ AI는 화면 코드를 생성하지 않는다. AI는 사용자의 질문과 투�
 
 Dashboard Schema는 원본 투자 데이터를 담지 않지만, 후속 read-only provider 확장에서는 각 데이터 묶음이 화면에 노출해야 하는 메타데이터 요구사항을 표현할 수 있어야 한다.
 
-현재 MVP 스키마 구현은 이 메타데이터 필드를 아직 허용하지 않는다. Provider 확장 구현 시에는 `data_requirements[*].metadata_fields` 같은 명시적 요구 필드 또는 동등한 검증 가능한 계약으로 각 데이터 묶음의 owner 모델에 존재하고 화면 표시에 필요한 값만 다음 owner 필드명으로 요구해야 한다. 아래 필드를 모든 데이터 묶음에 일괄 요구해서는 안 된다.
+현재 MVP 스키마 구현은 이 메타데이터 필드를 아직 허용하지 않는다. Provider 확장의 정확한 JSON 필드 구조는 Dashboard Schema와 백엔드·프런트엔드 validator를 함께 확장하는 변경에서 정의한다. 그 전에는 provider 메타데이터를 현재 스키마에 emit해서는 안 된다. 확장 계약은 각 데이터 묶음의 owner 모델에 존재하고 화면 표시에 필요한 값만 다음 owner 필드명으로 요구해야 하며, 아래 필드를 모든 데이터 묶음에 일괄 요구해서는 안 된다.
 
 - `provider`: 해당 owner 데이터를 공급한 provider 이름.
 - `provider_source_id`: `PriceSnapshot` 또는 `MarketIndexSnapshot`의 provider 내부 시세 또는 지수 소스 식별자.
