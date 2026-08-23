@@ -163,12 +163,14 @@ Dashboard Schema와 Widget Registry의 상태 표시 계약이 확장된 뒤 대
 - [ ] Dashboard Schema/Widget Registry 후속 확장 전에는 provider-derived fields가 schema validation을 우회하거나 현재 Dashboard Schema v1이 허용하지 않는 필드로 emit되지 않는다.
 - [ ] 주문 실행, dry-run 주문, 자동매매는 구현되지 않는다.
 - [ ] 출처 없는 AI 요약은 생성 또는 렌더링되지 않는다.
+- [ ] provider 원본 오류 본문, 응답 헤더, 내부 예외와 스택 추적은 `ProviderLookupResult`, Dashboard Schema, 프런트엔드 출력에 남지 않는다.
 
 ## 검증 기대치
 
 - `backend/tests`: fake provider로 보유 종목이 `ProviderHoldingSnapshot`, 현재가와 종목 기준가가 `PriceSnapshot`, KOSPI/KOSDAQ 지수가 `MarketIndexSnapshot` owner 용어로 정규화되는지 테스트를 추가한다.
 - `backend/tests`: provider metadata, `captured_at`, `refreshed_at`, 가격/지수의 `data_status`와 `snapshot_role`, `ProviderLookupResult.lookup_status`, provider 원본 종목의 `Stock` 매핑/미매핑 보존 동작이 정규화 결과에 포함되는지 검증한다.
 - `backend/tests`: 인증 실패, 권한 없음, 데이터 지연, provider 오류 상태가 서로 구분 가능한 `ProviderLookupResult`로 안전하게 전파되는지 검증한다.
+- `backend/tests`: 민감한 sentinel 값을 포함한 fake provider 오류가 정제된 뒤 `ProviderLookupResult`와 Dashboard Schema에 남지 않는지 검증한다.
 - `backend/tests`: provider-only unmapped 보유 종목이 `provider`, `provider_symbol`, `provider_market`으로 가격 snapshot에 연결되고 내부 `Stock` 자동 upsert 없이 보존되는지 검증한다.
 - `backend/tests`: 평균단가가 없거나 0 이하인 provider-only 보유 현황은 평균단가 기준 현재 수익률을 계산하지 않고 `UNAVAILABLE` 또는 `미산출` 상태를 반환하는지 검증한다.
 - `backend/tests`: provider 데이터와 거래 원장 또는 기준 입력으로 평균단가 기준 현재 수익률, 당일 triplet, 보유기간 triplet이 계산 규칙과 일치하며 서로 overwrite되지 않는지 검증한다.
@@ -177,6 +179,7 @@ Dashboard Schema와 Widget Registry의 상태 표시 계약이 확장된 뒤 대
 - `backend/tests` 또는 계약 테스트: Dashboard Schema/Widget Registry 후속 확장 전에는 provider-derived fields가 schema validation을 우회하거나 현재 Dashboard Schema v1이 허용하지 않는 필드로 emit되지 않는지 검증한다.
 - `frontend`: Dashboard Schema와 Widget Registry 후속 계약 확장 뒤 provider명, 기준 시각, 마지막 갱신 시각, `data_status`의 `STALE`/`UNAVAILABLE`과 `lookup_status`의 `PARTIAL`/`STALE`/`UNAVAILABLE`/`UNAUTHORIZED`/`FORBIDDEN`/`PROVIDER_ERROR`/`UNSUPPORTED` 상태가 독립적으로 표시되고 복합 상태에서 서로를 숨기지 않는지 검증한다.
 - `frontend`: 유효하지 않은 Dashboard Schema 또는 출처 없는 AI 요약이 렌더링되지 않는지 검증한다.
+- `frontend`: provider 원본 오류 sentinel이 Dashboard Schema 검증을 통과하거나 화면에 표시되지 않는지 검증한다.
 - 문서 리뷰: 기존 외부 API 없는 MVP 범위와 read-only provider 확장 범위가 충돌하지 않는지 확인한다.
 
 ## 근거 포인터

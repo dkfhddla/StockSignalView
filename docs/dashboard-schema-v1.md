@@ -87,7 +87,7 @@ Dashboard Schema는 원본 투자 데이터를 담지 않지만, 후속 read-onl
 
 Provider 확장 구현은 `docs/specs/stock-signal-view-data-model.md`가 소유한 `PriceSnapshot.data_status`, `MarketIndexSnapshot.data_status`, `ProviderLookupResult.lookup_status`의 허용 값과 의미를 그대로 참조해야 한다. Dashboard Schema는 이 owner 상태를 다른 이름이나 축약 상태로 재정의하지 않는다.
 
-스키마와 위젯은 `data_status`와 `lookup_status`를 하나의 상태로 접거나 숨기지 않아야 한다. `STALE`, `PARTIAL`, `UNAVAILABLE`, `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED` 상태를 정상 숫자처럼 표시해서는 안 된다.
+Dashboard Schema는 `data_status`와 `lookup_status`를 별도 필드로 보존하고 검증한다. 화면 표시 위계와 배지 매핑은 `docs/widget-registry.md`와 `docs/ui/components.md`가 소유한다.
 
 ## Widget 구조
 
