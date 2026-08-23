@@ -29,6 +29,7 @@ Dashboard Schema 수신
 ### Schema Adapter
 
 - 백엔드 또는 프리셋에서 받은 Dashboard Schema를 프론트엔드 내부 타입으로 변환한다.
+- `docs/dashboard-schema-v1.md`의 검증 규칙을 구현한 프론트엔드 validator를 적용한다.
 - 지원하지 않는 버전이나 필드를 발견하면 렌더링을 중단한다.
 
 ### Widget Resolver
@@ -41,6 +42,8 @@ Dashboard Schema 수신
 - `data_key` 또는 `data_keys`를 실제 API 응답 또는 캐시된 계산 결과와 연결한다.
 - 여러 데이터 묶음을 쓰는 위젯은 각 `data_keys[*]`를 병합하지 않고, 위젯이 구분 가능한 입력으로 전달한다.
 - 데이터가 없으면 위젯에 `EMPTY` 또는 `UNAVAILABLE` 상태를 전달한다.
+- 후속 provider 메타데이터 계약이 도입된 뒤 바인딩한 응답의 값이나 메타데이터가 없거나 유효하지 않으면 유효한 Schema를 `INVALID_SCHEMA`로 다시 분류하지 않고 위젯에 `UNAVAILABLE` 또는 해당 조회 상태를 전달한다.
+- Owner snapshot을 만들 수 없는 조회 실패도 `ProviderLookupResult.lookup_status`는 값 전용 메타데이터 없이 위젯에 전달할 수 있다.
 
 ### Layout Engine
 

@@ -73,7 +73,7 @@ PC 대시보드의 기본 컴포넌트다.
 - provider 오류
 - provider 미지원
 
-Provider 상태의 표시 라벨과 배지 매핑은 이 문서가 소유한다.
+다음 provider 상태 라벨과 배지 매핑은 Dashboard Schema와 양쪽 validator에 후속 메타데이터 계약이 도입된 뒤 적용하며, 이 문서가 표시 계약을 소유한다.
 
 - `data_status=AVAILABLE`: 값 최신
 - `data_status=STALE`: 값 갱신 지연
@@ -87,7 +87,7 @@ Provider 상태의 표시 라벨과 배지 매핑은 이 문서가 소유한다.
 - `lookup_status=PROVIDER_ERROR`: provider 오류
 - `lookup_status=UNSUPPORTED`: provider 미지원
 
-Provider 데이터 상태 배지는 provider명, 데이터 출처, 값의 기준 시각, 마지막 갱신 시각 근처에 표시한다. 둘 이상의 비정상 상태가 있으면 동시에 표시한다. 민감 정보 표시는 `docs/specs/read-only-market-data-provider.md`의 자격 증명·오류 비노출 경계를 따른다.
+Provider 데이터 상태 배지는 provider명, 데이터 출처, 값의 기준 시각, 마지막 갱신 시각 근처에 표시한다. 둘 이상의 비정상 상태가 있으면 동시에 표시한다. 자격 증명 표시는 `docs/specs/read-only-market-data-provider.md`의 비노출 경계를 따른다.
 
 ## 수익률 표시
 

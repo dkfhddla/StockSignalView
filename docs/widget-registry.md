@@ -145,7 +145,7 @@ Widget Registry는 Dashboard Schema v1에서 사용할 수 있는 위젯 타입�
 
 ## 데이터 상태 표시
 
-Provider 확장 데이터가 연결된 위젯은 Dashboard Schema의 후속 메타데이터 계약에 따라 스냅샷의 `data_status`와 `ProviderLookupResult.lookup_status`를 구분해 표시해야 한다. MVP의 수동/모의 데이터는 현재 스키마가 허용하는 필드와 위젯 상태 안에서 출처와 갱신 맥락을 표시한다.
+Dashboard Schema와 양쪽 validator에 후속 provider 메타데이터 계약이 도입된 뒤 해당 데이터가 연결된 위젯은 스냅샷의 `data_status`와 `ProviderLookupResult.lookup_status`를 구분해 표시해야 한다. 현재 MVP의 수동/모의 데이터에는 provider 메타데이터 표시를 요구하지 않고 기존 위젯 상태 계약만 적용한다.
 
 앞 절의 공통 상태는 위젯 렌더링 상태이고, `lookup_status`는 provider 조회 상태다. 두 필드에 같은 `PARTIAL` 또는 `UNAVAILABLE` 이름이 있어도 서로 대체해서는 안 된다.
 
@@ -159,8 +159,8 @@ Provider 확장 데이터가 연결된 위젯은 Dashboard Schema의 후속 메�
 - `STALE`, `PARTIAL`, `UNAVAILABLE`, `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED`는 정상 계산값과 같은 시각 위계로 표시하지 않는다.
 - 가격 또는 지수 값의 기준 시각과 시스템의 마지막 갱신 시각을 서로 대체해서 표시하지 않는다.
 - 마지막 성공 갱신 시각이 있으면 상태 근처에 함께 표시한다.
-- provider 오류 상태의 민감 정보 처리는 `docs/specs/read-only-market-data-provider.md`의 자격 증명·오류 비노출 경계를 따른다.
-- provider 기반 AI 산출물의 출처와 갱신 상태 유효성은 Dashboard Schema와 AI Dashboard Planner가 판정한다. 렌더러는 해당 검증에서 `INVALID_SCHEMA`가 반환되면 위젯을 렌더링하지 않는다.
+- provider 오류 상태의 자격 증명 처리는 `docs/specs/read-only-market-data-provider.md`의 비노출 경계를 따른다.
+- AI Dashboard Planner는 provider 기반 산출물에 필요한 출처와 갱신 상태를 제공하거나 보완 응답을 반환한다. 구조 유효성은 `docs/dashboard-schema-v1.md`의 검증 규칙과 백엔드·프런트엔드 validator가 판정하며, 렌더러는 `INVALID_SCHEMA`가 반환되면 위젯을 렌더링하지 않는다.
 - AI 요약이나 위젯 제목은 유효한 데이터 출처와 갱신 상태를 가리면 안 된다.
 
 ## 추가 기준

@@ -81,13 +81,14 @@ Dashboard Schema는 원본 투자 데이터를 담지 않지만, 후속 read-onl
 - `captured_at`: 해당 owner 값의 기준 시각.
 - `refreshed_at`: provider 또는 내부 입력에서 해당 owner 값을 마지막으로 갱신한 시각.
 - `data_status`: `PriceSnapshot` 또는 `MarketIndexSnapshot` 값의 사용 가능 상태.
+- `snapshot_role`: `PriceSnapshot` 또는 `MarketIndexSnapshot` 값의 계산 역할.
 - `lookup_status`: `ProviderLookupResult`가 보존한 조회 성공 또는 실패 원인.
 
-예를 들어 `provider_source_id`는 가격 또는 지수 스냅샷 데이터 묶음에만 적용한다. 보유 현황 데이터 묶음은 `ProviderHoldingSnapshot`의 `external_account_id`, `raw_provider_symbol`, `raw_market`처럼 해당 owner 모델에 정의된 필드를 사용한다.
+예를 들어 `provider_source_id`와 `snapshot_role`은 가격 또는 지수 스냅샷 데이터 묶음에만 적용한다. 가격 또는 지수의 기준 시각과 상태를 노출할 때는 `snapshot_role`을 함께 보존해 `CURRENT`, `DAY_BASELINE`, `HOLDING_PERIOD_BASELINE`을 구분한다. 보유 현황 데이터 묶음은 `ProviderHoldingSnapshot`의 `external_account_id`, `raw_provider_symbol`, `raw_market`처럼 해당 owner 모델에 정의된 필드를 사용한다.
 
 Provider 확장 구현은 `docs/specs/stock-signal-view-data-model.md`가 소유한 `PriceSnapshot.data_status`, `MarketIndexSnapshot.data_status`, `ProviderLookupResult.lookup_status`의 허용 값과 의미를 그대로 참조해야 한다. Dashboard Schema는 이 owner 상태를 다른 이름이나 축약 상태로 재정의하지 않는다.
 
-Dashboard Schema는 `data_status`와 `lookup_status`를 별도 필드로 보존하고 검증한다. Widget Registry는 위젯의 상태 노출 조건을 소유하고, `docs/ui/components.md`는 각 상태의 표시 라벨과 배지 매핑을 소유한다.
+후속 provider 메타데이터 계약이 Dashboard Schema와 양쪽 validator에 도입되면 Schema는 `data_status`와 `lookup_status`를 별도 필드로 보존하고 검증한다. Widget Registry는 위젯의 상태 노출 조건을 소유하고, `docs/ui/components.md`는 각 상태의 표시 라벨과 배지 매핑을 소유한다.
 
 ## Widget 구조
 
@@ -140,7 +141,8 @@ Dashboard Schema는 `data_status`와 `lookup_status`를 별도 필드로 보존�
 - `data_requirements`와 `widgets`는 각각 하나 이상의 항목을 포함해야 한다.
 - `data_requirements[*].key`는 대시보드 안에서 고유해야 한다.
 - 후속 provider 메타데이터 요구 필드가 추가되면 허용된 메타데이터 필드만 포함해야 한다.
-- 후속 provider 메타데이터 계약이 추가된 뒤 provider 기반 위젯이나 AI 요약에 필수 출처 또는 갱신 상태가 없거나 유효하지 않으면 스키마를 거부한다.
+- 후속 provider 메타데이터 계약이 추가된 뒤 Dashboard Schema JSON에 포함된 메타데이터 필드가 필수 구조나 허용 상태 조합을 충족하지 않으면 스키마를 거부한다.
+- Schema 검증 뒤 Data Binder가 연결한 provider 응답의 값이나 메타데이터가 없거나 유효하지 않은 경우는 `INVALID_SCHEMA`로 분류하지 않는다. 런타임 데이터 상태 처리는 `docs/dynamic-view-renderer.md`가 소유한다.
 - `widgets[*].widget_id`는 대시보드 안에서 고유해야 한다.
 - `widgets[*].type`이 위젯 레지스트리에 없으면 거부한다.
 - `widgets[*]`는 `data_key` 또는 `data_keys` 중 하나 이상을 가져야 한다.
