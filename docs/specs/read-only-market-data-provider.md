@@ -130,6 +130,8 @@ AI 출력은 허용된 Dashboard Schema와 위젯 레지스트리 계약을 통�
 
 provider 인증이 실패하면 시스템은 사용자 API 자격 증명이나 내부 토큰을 노출하지 않고 `ProviderLookupResult.lookup_status`로 오류 상태를 반환한다.
 
+`ProviderLookupResult.error_code`와 `message`는 사용자에게 표시 가능한 분류와 설명만 포함한다. provider 원본 오류 본문, 응답 헤더, 내부 예외나 스택 추적은 Dashboard Schema 또는 프런트엔드로 전달하지 않는다.
+
 Dashboard Schema와 Widget Registry의 상태 표시 계약이 확장된 뒤 대시보드는 마지막 성공 갱신 시각이 있으면 함께 표시하고, 현재 데이터가 최신이 아님을 사용자가 이해할 수 있게 보여준다.
 
 ## 계약 기준
