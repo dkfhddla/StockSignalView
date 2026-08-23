@@ -66,10 +66,13 @@ Provider 확장 데이터가 연결된 모바일 카드는 provider명, 데이�
 
 ### 행 상태
 
-- 정상: 현재가와 시장 지수 기준값이 모두 있고 `data_status`와 `lookup_status`가 `AVAILABLE`이어서 계산 가능하다.
-- 데이터 부족: 현재가, 기준가, 시장 지수 중 하나 이상이 없거나 `data_status` 또는 `lookup_status`가 `UNAVAILABLE`이다.
+- 정상: 현재가와 시장 지수 기준값이 모두 있어 계산 가능하다.
+- 데이터 부족: 현재가, 기준가, 시장 지수 중 하나 이상이 없다.
 - 알림: 목표 수익률, 손절 기준, 상대수익률 조건 중 하나 이상이 충족됐다.
 - 모의 데이터: 실제 외부 시세가 아니라 수동 입력 또는 샘플 데이터로 계산됐다.
+
+Provider 확장 데이터가 연결된 행은 관련 owner 데이터 묶음의 `data_status`와 `lookup_status`를 추가로 확인한다. 화면 계산에 필요한 상태가 모두 `AVAILABLE`일 때만 provider 데이터를 정상으로 취급한다. `data_status` 또는 `lookup_status`가 `UNAVAILABLE`이면 데이터 부족으로 처리하고, 그 외에는 다음 상태를 별도로 표시한다.
+
 - 갱신 지연: `data_status` 또는 `lookup_status`가 `STALE`이며 마지막 성공 갱신값은 있으나 최신 데이터로 보기 어렵다.
 - 일부 데이터: `lookup_status`가 `PARTIAL`이며 일부 대상 또는 일부 필드만 사용할 수 있다.
 - provider 오류: `lookup_status`가 `PROVIDER_ERROR`여서 최신 값을 가져오지 못했다.

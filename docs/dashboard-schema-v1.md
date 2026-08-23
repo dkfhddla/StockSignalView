@@ -73,15 +73,17 @@ AI는 화면 코드를 생성하지 않는다. AI는 사용자의 질문과 투�
 
 Dashboard Schema는 원본 투자 데이터를 담지 않지만, 후속 read-only provider 확장에서는 각 데이터 묶음이 화면에 노출해야 하는 메타데이터 요구사항을 표현할 수 있어야 한다.
 
-현재 MVP 스키마 구현은 이 메타데이터 필드를 아직 허용하지 않는다. Provider 확장 구현 시에는 `data_requirements[*].metadata_fields` 같은 명시적 요구 필드 또는 동등한 검증 가능한 계약으로 데이터 묶음에 필요한 값을 다음 owner 필드명으로 요구해야 한다.
+현재 MVP 스키마 구현은 이 메타데이터 필드를 아직 허용하지 않는다. Provider 확장 구현 시에는 `data_requirements[*].metadata_fields` 같은 명시적 요구 필드 또는 동등한 검증 가능한 계약으로 각 데이터 묶음의 owner 모델에 존재하고 화면 표시에 필요한 값만 다음 owner 필드명으로 요구해야 한다. 아래 필드를 모든 데이터 묶음에 일괄 요구해서는 안 된다.
 
-- `provider`: 데이터를 공급한 provider 이름.
-- `provider_source_id`: provider 내부 시세 소스 또는 연동 식별자.
-- `source`: 수동, 모의, market API 같은 입력 출처.
-- `captured_at`: 가격 또는 지수 값의 기준 시각.
-- `refreshed_at`: provider 또는 내부 입력에서 마지막으로 갱신한 시각.
+- `provider`: 해당 owner 데이터를 공급한 provider 이름.
+- `provider_source_id`: `PriceSnapshot` 또는 `MarketIndexSnapshot`의 provider 내부 시세 또는 지수 소스 식별자.
+- `source`: 해당 owner 모델에 정의된 수동, 모의, broker API, market API 같은 입력 출처.
+- `captured_at`: 해당 owner 값의 기준 시각.
+- `refreshed_at`: provider 또는 내부 입력에서 해당 owner 값을 마지막으로 갱신한 시각.
 - `data_status`: `PriceSnapshot` 또는 `MarketIndexSnapshot` 값의 사용 가능 상태.
 - `lookup_status`: `ProviderLookupResult`가 보존한 조회 성공 또는 실패 원인.
+
+예를 들어 `provider_source_id`는 가격 또는 지수 스냅샷 데이터 묶음에만 적용한다. 보유 현황 데이터 묶음은 `ProviderHoldingSnapshot`의 `external_account_id`, `raw_provider_symbol`, `raw_market`처럼 해당 owner 모델에 정의된 필드를 사용한다.
 
 Provider 확장 구현 시 `data_status`는 데이터 모델의 상태를 그대로 사용한다.
 
