@@ -71,7 +71,7 @@ PR 12 기준에서 대시보드는 정적 화면 정의가 아니라 Dashboard S
 - 알림: 목표 수익률, 손절 기준, 상대수익률 조건 중 하나 이상이 충족됐다.
 - 모의 데이터: 실제 외부 시세가 아니라 수동 입력 또는 샘플 데이터로 계산됐다.
 
-Provider 확장 데이터가 연결된 행은 관련 owner 데이터 묶음의 상태를 독립적으로 확인하고 표시한다. `data_status`는 계산에 쓰는 `PriceSnapshot`과 `MarketIndexSnapshot`에만 적용하고, 보유 현황은 해당 `ProviderLookupResult.lookup_status`로 조회 가능 여부를 판단한다. 조회 상태는 보유 조회에서 같은 결과의 `lookup_type`과 `target_key`, 가격·지수 조회에서 여기에 `snapshot_role`까지 포함한 조합으로 해당 행이나 계산 입력에 연결한다. 적용 가능한 가격·지수 `data_status`와 관련 조회의 `lookup_status`가 모두 `AVAILABLE`일 때만 provider 데이터를 정상으로 취급한다. 가격·지수 스냅샷의 기준 시각과 `data_status` 배지는 해당 `snapshot_role` 또는 이해 가능한 역할 라벨과 한 묶음으로 표시하며, 같은 상태가 여러 역할에서 발생해도 라벨 없는 중복 배지로 표시하지 않는다. 일부 행이나 지표만 사용할 수 없으면 `PARTIAL`, 핵심 데이터를 모두 사용할 수 없으면 `UNAVAILABLE`로 표시한다. 둘 이상의 비정상 상태가 동시에 발생하면 해당 상태를 모두 표시하며, 데이터 부족 상태가 조회 실패 원인을 숨겨서는 안 된다.
+`provider_metadata`가 있는 데이터에 연결된 행은 관련 owner 데이터 묶음의 상태를 독립적으로 확인하고 표시한다. `data_status`는 계산에 쓰는 `PriceSnapshot`과 `MarketIndexSnapshot`에만 적용하고, 보유 현황은 해당 `ProviderLookupResult.lookup_status`로 조회 가능 여부를 판단한다. 조회 상태는 보유 조회에서 같은 결과의 `lookup_type`과 `target_key`, 가격·지수 조회에서 여기에 `snapshot_role`까지 포함한 조합으로 해당 행이나 계산 입력에 연결한다. 적용 가능한 가격·지수 `data_status`와 관련 조회의 `lookup_status`가 모두 `AVAILABLE`일 때만 provider 데이터를 정상으로 취급한다. 가격·지수 스냅샷의 기준 시각과 `data_status` 배지는 해당 `snapshot_role` 또는 이해 가능한 역할 라벨과 한 묶음으로 표시하며, 같은 상태가 여러 역할에서 발생해도 라벨 없는 중복 배지로 표시하지 않는다. 일부 행이나 지표만 사용할 수 없으면 `PARTIAL`, 핵심 데이터를 모두 사용할 수 없으면 `UNAVAILABLE`로 표시한다. 둘 이상의 비정상 상태가 동시에 발생하면 해당 상태를 모두 표시하며, 데이터 부족 상태가 조회 실패 원인을 숨겨서는 안 된다.
 
 상태별 표시 라벨과 배지 매핑은 `docs/ui/components.md`의 상태 배지 계약을 따른다.
 

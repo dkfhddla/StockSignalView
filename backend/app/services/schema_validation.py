@@ -6,6 +6,7 @@ from app.schemas.dashboard import (
     AlertStatusListWidget,
     DashboardDataType,
     DashboardSchema,
+    DashboardSource,
     DecisionTimelineWidget,
     PositionTableWidget,
 )
@@ -32,6 +33,17 @@ def validate_dashboard_schema(schema: DashboardSchema) -> DashboardSchema:
         errors.append("dashboard requires at least one data requirement")
     if not schema.widgets:
         errors.append("dashboard requires at least one widget")
+    if schema.source is DashboardSource.AI_PLANNER:
+        missing_metadata = [
+            requirement.key
+            for requirement in schema.data_requirements
+            if requirement.provider_metadata is None
+        ]
+        if missing_metadata:
+            errors.append(
+                "AI_PLANNER data requirements require provider metadata: "
+                + ", ".join(missing_metadata)
+            )
 
     for widget in schema.widgets:
         if isinstance(widget, AlertStatusListWidget):

@@ -73,7 +73,7 @@ PC 대시보드의 기본 컴포넌트다.
 - provider 오류
 - provider 미지원
 
-다음 provider 상태 라벨과 배지 매핑은 Dashboard Schema와 양쪽 validator에 후속 메타데이터 계약이 도입된 뒤 적용하며, 이 문서가 표시 계약을 소유한다.
+다음 provider 상태 라벨과 배지 매핑은 Dashboard Schema와 양쪽 validator가 허용한 메타데이터에 적용하며, 이 문서가 표시 계약을 소유한다.
 
 - `data_status=AVAILABLE`: 값 최신
 - `data_status=STALE`: 값 갱신 지연
@@ -87,13 +87,13 @@ PC 대시보드의 기본 컴포넌트다.
 - `lookup_status=PROVIDER_ERROR`: provider 오류
 - `lookup_status=UNSUPPORTED`: provider 미지원
 
-가격·지수 스냅샷의 역할 라벨은 다음과 같이 표시한다.
+가격·지수 스냅샷 전용 데이터 요구사항이 추가되면 역할 라벨은 다음과 같이 표시한다.
 
 - `snapshot_role=CURRENT`: 현재가 또는 현재 지수
 - `snapshot_role=DAY_BASELINE`: 당일 기준 가격 또는 지수
 - `snapshot_role=HOLDING_PERIOD_BASELINE`: 보유기간 기준 가격 또는 지수
 
-각 가격·지수 상태 배지는 같은 스냅샷의 역할 라벨과 기준 시각 근처에 표시한다. `ProviderHoldingSnapshot.captured_at`은 `보유 현황 기준`으로 표시하고 provider 기반 보유 수량과 평균 매수가 가까이에 둔다. Provider 데이터 상태 배지는 provider명, 데이터 출처, 마지막 갱신 시각과 같은 메타데이터 영역에 둔다. 둘 이상의 비정상 상태가 있으면 동시에 표시한다. 자격 증명 표시는 `docs/specs/read-only-market-data-provider.md`의 비노출 경계를 따른다.
+가격·지수 스냅샷 전용 계약에서는 각 상태 배지를 같은 스냅샷의 역할 라벨과 기준 시각 근처에 표시한다. `ProviderHoldingSnapshot.captured_at`은 `보유 현황 기준`으로 표시하고 provider 기반 보유 수량과 평균 매수가 가까이에 둔다. Provider 데이터 상태 배지는 provider명, 데이터 출처, 마지막 갱신 시각과 같은 메타데이터 영역에 둔다. 둘 이상의 비정상 상태가 있으면 동시에 표시한다. 자격 증명 표시는 `docs/specs/read-only-market-data-provider.md`의 비노출 경계를 따른다.
 
 Provider 기반 평균 매수가의 원가 근거 라벨은 다음과 같이 표시한다.
 

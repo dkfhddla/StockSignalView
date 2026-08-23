@@ -1,11 +1,25 @@
 from __future__ import annotations
 
+import re
+from datetime import datetime
 from enum import Enum
 from typing import Annotated, Any, Literal, Union
 
-from pydantic import BaseModel, ConfigDict, Field, PositiveInt, StringConstraints, model_validator
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    Field,
+    PositiveInt,
+    StringConstraints,
+    field_validator,
+    model_validator,
+)
 
 NonEmptyString = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+_AWARE_TIMESTAMP_PATTERN = re.compile(
+    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$"
+)
 
 
 class StrictModel(BaseModel):
@@ -24,6 +38,31 @@ class DashboardDataType(str, Enum):
     TRADES = "trades"
     ALERT_RULES = "alert_rules"
     ALERT_EVENTS = "alert_events"
+
+
+class DashboardDataSource(str, Enum):
+    MANUAL = "MANUAL"
+    BROKER_API = "BROKER_API"
+    MARKET_API = "MARKET_API"
+    IMPORT = "IMPORT"
+    MOCK = "MOCK"
+
+
+class DashboardDataStatus(str, Enum):
+    AVAILABLE = "AVAILABLE"
+    STALE = "STALE"
+    UNAVAILABLE = "UNAVAILABLE"
+
+
+class DashboardLookupStatus(str, Enum):
+    AVAILABLE = "AVAILABLE"
+    PARTIAL = "PARTIAL"
+    STALE = "STALE"
+    UNAVAILABLE = "UNAVAILABLE"
+    UNAUTHORIZED = "UNAUTHORIZED"
+    FORBIDDEN = "FORBIDDEN"
+    PROVIDER_ERROR = "PROVIDER_ERROR"
+    UNSUPPORTED = "UNSUPPORTED"
 
 
 class PositionTableColumn(str, Enum):
@@ -56,16 +95,88 @@ class PortfolioPositionFilters(StrictModel):
     holding_status: Literal["HELD_OR_WATCHLISTED"]
 
 
+class DashboardDataAttribution(StrictModel):
+    provider: NonEmptyString
+    source: DashboardDataSource
+    captured_at: AwareDatetime | None = None
+    refreshed_at: AwareDatetime
+
+    @field_validator("captured_at", "refreshed_at", mode="before")
+    @classmethod
+    def validate_timestamp_string(cls, value: Any) -> Any:
+        if value is None:
+            return value
+        if not isinstance(value, str) or _AWARE_TIMESTAMP_PATTERN.fullmatch(value) is None:
+            raise ValueError("timestamp must be a timezone-aware ISO 8601 string")
+        try:
+            datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError as error:
+            raise ValueError("timestamp must be a valid calendar date") from error
+        return value
+
+    @model_validator(mode="before")
+    @classmethod
+    def reject_null_captured_at(cls, data: Any) -> Any:
+        if isinstance(data, dict) and "captured_at" in data and data["captured_at"] is None:
+            raise ValueError("captured_at must be omitted or define a timestamp")
+        return data
+
+
+class DashboardProviderStatus(StrictModel):
+    data_status: DashboardDataStatus | None = None
+    lookup_status: DashboardLookupStatus | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def reject_null_optional_statuses(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "data_status" in data and data["data_status"] is None:
+                raise ValueError("data_status must be omitted or define a supported status")
+            if "lookup_status" in data and data["lookup_status"] is None:
+                raise ValueError("lookup_status must be omitted or define a supported status")
+        return data
+
+
+class DashboardProviderMetadata(StrictModel):
+    attribution: DashboardDataAttribution
+    status: DashboardProviderStatus
+
+    @model_validator(mode="after")
+    def validate_status_for_attribution(self) -> DashboardProviderMetadata:
+        if (
+            self.attribution.source
+            in {DashboardDataSource.BROKER_API, DashboardDataSource.MARKET_API}
+            and self.status.lookup_status is None
+        ):
+            raise ValueError("provider API sources require lookup_status")
+        if (
+            self.attribution.source is DashboardDataSource.MANUAL
+            and self.status.lookup_status is not None
+        ):
+            raise ValueError("MANUAL source cannot define lookup_status")
+        if (
+            self.status.data_status
+            in {DashboardDataStatus.AVAILABLE, DashboardDataStatus.STALE}
+            and self.attribution.captured_at is None
+        ):
+            raise ValueError("AVAILABLE and STALE data require captured_at")
+        return self
+
+
 class DashboardDataRequirement(StrictModel):
     key: NonEmptyString
     type: DashboardDataType
     filters: PortfolioPositionFilters | None = None
+    provider_metadata: DashboardProviderMetadata | None = None
 
     @model_validator(mode="before")
     @classmethod
-    def reject_null_filters(cls, data: Any) -> Any:
-        if isinstance(data, dict) and "filters" in data and data["filters"] is None:
-            raise ValueError("filters must be omitted or define a supported filter")
+    def reject_null_optional_fields(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "filters" in data and data["filters"] is None:
+                raise ValueError("filters must be omitted or define a supported filter")
+            if "provider_metadata" in data and data["provider_metadata"] is None:
+                raise ValueError("provider_metadata must be omitted or define metadata")
         return data
 
     @model_validator(mode="after")

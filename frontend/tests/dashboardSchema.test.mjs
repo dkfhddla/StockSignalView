@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test, { after } from "node:test";
 
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
 
 const vite = await createServer({
@@ -14,6 +16,9 @@ const { validateDashboardSchema } = await vite.ssrLoadModule(
 );
 const { DashboardSchemaValidationError, fetchDefaultDashboard } = await vite.ssrLoadModule(
   "/src/lib/dashboardApi.ts",
+);
+const { DashboardRenderer } = await vite.ssrLoadModule(
+  "/src/features/dashboard/DashboardRenderer.tsx",
 );
 
 after(async () => {
@@ -57,10 +62,199 @@ function validSchema() {
   return withFilters({ holding_status: "HELD_OR_WATCHLISTED" });
 }
 
+function providerMetadata() {
+  return {
+    attribution: {
+      provider: "Toss Securities",
+      source: "BROKER_API",
+      captured_at: "2026-08-24T09:00:00+09:00",
+      refreshed_at: "2026-08-24T09:01:00+09:00",
+    },
+    status: {
+      data_status: "STALE",
+      lookup_status: "UNAUTHORIZED",
+    },
+  };
+}
+
+function withProviderMetadata(metadata = providerMetadata()) {
+  const schema = validSchema();
+  schema.data_requirements[0].provider_metadata = metadata;
+  return schema;
+}
+
+function renderDashboard(schema) {
+  return renderToStaticMarkup(
+    createElement(DashboardRenderer, {
+      activeFilter: "전체",
+      onFilterChange: () => {},
+      positions: [],
+      schema,
+      schemaSourceMessage: "테스트 스키마",
+      summaryPositions: [],
+    }),
+  );
+}
+
 test("accepts the supported portfolio position filter", () => {
   const schema = validSchema();
 
   assert.equal(validateDashboardSchema(schema), "READY");
+});
+
+test("accepts provider attribution and independent statuses", () => {
+  const schema = withProviderMetadata();
+
+  assert.equal(validateDashboardSchema(schema), "READY");
+});
+
+test("rejects malformed provider metadata", () => {
+  const missingAttribution = providerMetadata();
+  delete missingAttribution.attribution;
+
+  const blankProvider = providerMetadata();
+  blankProvider.attribution.provider = " ";
+
+  const invalidSource = providerMetadata();
+  invalidSource.attribution.source = "REMOTE";
+
+  const timezoneMissing = providerMetadata();
+  timezoneMissing.attribution.refreshed_at = "2026-08-24T09:01:00";
+
+  const numericTimestamp = providerMetadata();
+  numericTimestamp.attribution.refreshed_at = 0;
+
+  const invalidCalendarDate = providerMetadata();
+  invalidCalendarDate.attribution.refreshed_at = "2026-02-30T09:01:00Z";
+
+  const invalidDataStatus = providerMetadata();
+  invalidDataStatus.status.data_status = "FRESH";
+
+  const invalidLookupStatus = providerMetadata();
+  invalidLookupStatus.status.lookup_status = "ERROR";
+
+  const missingProviderLookupStatus = providerMetadata();
+  delete missingProviderLookupStatus.status.lookup_status;
+
+  const missingCapturedAt = providerMetadata();
+  delete missingCapturedAt.attribution.captured_at;
+
+  const manualProviderLookupStatus = providerMetadata();
+  manualProviderLookupStatus.attribution.source = "MANUAL";
+
+  const unsupportedStatusField = providerMetadata();
+  unsupportedStatusField.status.unexpected = "unsupported";
+
+  const explicitNull = providerMetadata();
+  explicitNull.status.data_status = null;
+
+  for (const metadata of [
+    missingAttribution,
+    blankProvider,
+    invalidSource,
+    timezoneMissing,
+    numericTimestamp,
+    invalidCalendarDate,
+    invalidDataStatus,
+    invalidLookupStatus,
+    missingProviderLookupStatus,
+    missingCapturedAt,
+    manualProviderLookupStatus,
+    unsupportedStatusField,
+    explicitNull,
+  ]) {
+    assert.equal(validateDashboardSchema(withProviderMetadata(metadata)), "INVALID_SCHEMA");
+  }
+});
+
+test("accepts local attribution without a provider lookup status", () => {
+  const schema = withProviderMetadata({
+    attribution: {
+      provider: "StockSignalView",
+      source: "MANUAL",
+      refreshed_at: "2026-08-24T09:01:00+09:00",
+    },
+    status: {},
+  });
+
+  assert.equal(validateDashboardSchema(schema), "READY");
+  assert.match(renderDashboard(schema), /수동 입력/);
+});
+
+test("requires attribution for AI planner dashboards", () => {
+  const unattributed = validSchema();
+  unattributed.source = "AI_PLANNER";
+  unattributed.description = "출처 없는 provider 요약";
+
+  const attributed = withProviderMetadata();
+  attributed.source = "AI_PLANNER";
+
+  assert.equal(validateDashboardSchema(unattributed), "INVALID_SCHEMA");
+  assert.equal(validateDashboardSchema(attributed), "READY");
+});
+
+test("renders provider attribution and composite status badges", () => {
+  const markup = renderDashboard(withProviderMetadata());
+
+  assert.match(markup, /Toss Securities/);
+  assert.match(markup, /증권사 API/);
+  assert.match(markup, /값 기준/);
+  assert.match(markup, /마지막 갱신/);
+  assert.match(markup, /값 갱신 지연/);
+  assert.match(markup, /인증 실패/);
+});
+
+test("renders every supported data and lookup status", () => {
+  const dataStatusLabels = {
+    AVAILABLE: "값 최신",
+    STALE: "값 갱신 지연",
+    UNAVAILABLE: "데이터 부족",
+  };
+  const lookupStatusLabels = {
+    AVAILABLE: "조회 정상",
+    PARTIAL: "일부 데이터",
+    STALE: "조회 지연",
+    UNAVAILABLE: "조회 결과 없음",
+    UNAUTHORIZED: "인증 실패",
+    FORBIDDEN: "권한 없음",
+    PROVIDER_ERROR: "provider 오류",
+    UNSUPPORTED: "provider 미지원",
+  };
+
+  for (const [status, label] of Object.entries(dataStatusLabels)) {
+    const metadata = providerMetadata();
+    metadata.status.data_status = status;
+    assert.match(renderDashboard(withProviderMetadata(metadata)), new RegExp(label));
+  }
+
+  for (const [status, label] of Object.entries(lookupStatusLabels)) {
+    const metadata = providerMetadata();
+    metadata.status.lookup_status = status;
+    assert.match(renderDashboard(withProviderMetadata(metadata)), new RegExp(label));
+  }
+});
+
+test("does not render unattributed AI summaries", () => {
+  const schema = validSchema();
+  schema.source = "AI_PLANNER";
+  schema.description = "출처 없는 provider 요약";
+  const markup = renderDashboard(schema);
+
+  assert.match(markup, /대시보드 스키마를 표시할 수 없습니다/);
+  assert.doesNotMatch(markup, /출처 없는 provider 요약/);
+});
+
+test("renders schema strings as escaped text", () => {
+  const schema = withProviderMetadata();
+  schema.title = "<script>alert('dashboard')</script>";
+  schema.data_requirements[0].provider_metadata.attribution.provider =
+    "<img src=x onerror=alert('provider')>";
+  const markup = renderDashboard(schema);
+
+  assert.doesNotMatch(markup, /<script>/);
+  assert.doesNotMatch(markup, /<img/);
+  assert.match(markup, /&lt;script&gt;/);
+  assert.match(markup, /&lt;img/);
 });
 
 test("rejects unsupported filter keys", () => {

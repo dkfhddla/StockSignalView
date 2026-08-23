@@ -9,19 +9,47 @@ export type WidgetType =
   | "alert_status_list";
 export type ImplementedWidgetType = "position_summary" | "position_table" | "position_cards";
 
+export type DashboardProviderSource = "MANUAL" | "BROKER_API" | "MARKET_API" | "IMPORT" | "MOCK";
+export type DashboardDataStatus = "AVAILABLE" | "STALE" | "UNAVAILABLE";
+export type DashboardLookupStatus =
+  | "AVAILABLE"
+  | "PARTIAL"
+  | "STALE"
+  | "UNAVAILABLE"
+  | "UNAUTHORIZED"
+  | "FORBIDDEN"
+  | "PROVIDER_ERROR"
+  | "UNSUPPORTED";
+
+export type DashboardProviderMetadata = {
+  attribution: {
+    provider: string;
+    source: DashboardProviderSource;
+    captured_at?: string;
+    refreshed_at: string;
+  };
+  status: {
+    data_status?: DashboardDataStatus;
+    lookup_status?: DashboardLookupStatus;
+  };
+};
+
+type DashboardDataRequirementBase = {
+  key: string;
+  provider_metadata?: DashboardProviderMetadata;
+};
+
 export type DashboardDataRequirement =
-  | {
-      key: string;
+  | (DashboardDataRequirementBase & {
       type: "portfolio_positions";
       filters?: {
         holding_status: "HELD_OR_WATCHLISTED";
       };
-    }
-  | {
-      key: string;
+    })
+  | (DashboardDataRequirementBase & {
       type: Exclude<DashboardDataType, "portfolio_positions">;
       filters?: never;
-    };
+    });
 
 export type DashboardSchema = {
   schema_version: "1.0";
@@ -157,6 +185,18 @@ const positionTableColumns: PositionTableColumn[] = [
   "strength_status",
   "calculation_status",
 ];
+const providerSources: DashboardProviderSource[] = ["MANUAL", "BROKER_API", "MARKET_API", "IMPORT", "MOCK"];
+const dataStatuses: DashboardDataStatus[] = ["AVAILABLE", "STALE", "UNAVAILABLE"];
+const lookupStatuses: DashboardLookupStatus[] = [
+  "AVAILABLE",
+  "PARTIAL",
+  "STALE",
+  "UNAVAILABLE",
+  "UNAUTHORIZED",
+  "FORBIDDEN",
+  "PROVIDER_ERROR",
+  "UNSUPPORTED",
+];
 
 export function validateDashboardSchema(schema: unknown): RendererStatus {
   if (!isRecord(schema)) return "INVALID_SCHEMA";
@@ -177,6 +217,12 @@ export function validateDashboardSchema(schema: unknown): RendererStatus {
 
   const dataRequirements = schema.data_requirements as DashboardDataRequirement[];
   const widgets = schema.widgets as DashboardWidget[];
+  if (
+    schema.source === "AI_PLANNER" &&
+    dataRequirements.some((requirement) => requirement.provider_metadata === undefined)
+  ) {
+    return "INVALID_SCHEMA";
+  }
   const dataRequirementKeys = dataRequirements.map((requirement) => requirement.key);
   const widgetIds = widgets.map((widget) => widget.widget_id);
   if (!hasUniqueValues(dataRequirementKeys) || !hasUniqueValues(widgetIds)) {
@@ -201,7 +247,12 @@ function isDataRequirementValid(requirement: unknown): requirement is DashboardD
   if (!isRecord(requirement)) return false;
   if (typeof requirement.key !== "string" || requirement.key.trim() === "") return false;
   if (!isDashboardDataType(requirement.type)) return false;
-  if (!hasOnlyOptionKeys(requirement, ["key", "type", "filters"])) return false;
+  if (!hasOnlyOptionKeys(requirement, ["key", "type", "filters", "provider_metadata"])) return false;
+  if (requirement.provider_metadata === undefined) {
+    if (Object.hasOwn(requirement, "provider_metadata")) return false;
+  } else if (!isProviderMetadataValid(requirement.provider_metadata)) {
+    return false;
+  }
   if (requirement.filters === undefined) {
     return !Object.hasOwn(requirement, "filters");
   }
@@ -211,6 +262,44 @@ function isDataRequirementValid(requirement: unknown): requirement is DashboardD
   return (
     hasOnlyOptionKeys(requirement.filters, ["holding_status"]) &&
     requirement.filters.holding_status === "HELD_OR_WATCHLISTED"
+  );
+}
+
+function isProviderMetadataValid(metadata: unknown): metadata is DashboardProviderMetadata {
+  if (!isRecord(metadata)) return false;
+  if (!hasOnlyOptionKeys(metadata, ["attribution", "status"])) return false;
+  if (!isRecord(metadata.attribution) || !isRecord(metadata.status)) return false;
+  if (!hasOnlyOptionKeys(metadata.attribution, ["provider", "source", "captured_at", "refreshed_at"])) {
+    return false;
+  }
+  if (typeof metadata.attribution.provider !== "string" || metadata.attribution.provider.trim() === "") {
+    return false;
+  }
+  if (!isProviderSource(metadata.attribution.source)) return false;
+  if (!isAwareTimestamp(metadata.attribution.refreshed_at)) return false;
+  if (metadata.attribution.captured_at === undefined) {
+    if (Object.hasOwn(metadata.attribution, "captured_at")) return false;
+  } else if (!isAwareTimestamp(metadata.attribution.captured_at)) {
+    return false;
+  }
+  if (!hasOnlyOptionKeys(metadata.status, ["data_status", "lookup_status"])) return false;
+  if (metadata.status.lookup_status === undefined) {
+    if (Object.hasOwn(metadata.status, "lookup_status")) return false;
+    if (["BROKER_API", "MARKET_API"].includes(metadata.attribution.source)) return false;
+  } else if (!isLookupStatus(metadata.status.lookup_status)) {
+    return false;
+  }
+  if (metadata.attribution.source === "MANUAL" && metadata.status.lookup_status !== undefined) {
+    return false;
+  }
+  if (metadata.status.data_status === undefined) {
+    return !Object.hasOwn(metadata.status, "data_status");
+  }
+  if (!isDataStatus(metadata.status.data_status)) return false;
+
+  return (
+    !["AVAILABLE", "STALE"].includes(metadata.status.data_status) ||
+    metadata.attribution.captured_at !== undefined
   );
 }
 
@@ -355,6 +444,57 @@ function isDashboardDataType(value: unknown): value is DashboardDataType {
     value === "alert_rules" ||
     value === "alert_events"
   );
+}
+
+function isProviderSource(value: unknown): value is DashboardProviderSource {
+  return typeof value === "string" && providerSources.includes(value as DashboardProviderSource);
+}
+
+function isDataStatus(value: unknown): value is DashboardDataStatus {
+  return typeof value === "string" && dataStatuses.includes(value as DashboardDataStatus);
+}
+
+function isLookupStatus(value: unknown): value is DashboardLookupStatus {
+  return typeof value === "string" && lookupStatuses.includes(value as DashboardLookupStatus);
+}
+
+function isAwareTimestamp(value: unknown) {
+  if (typeof value !== "string") return false;
+  const match = value.match(
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,6})?(?:Z|[+-](\d{2}):(\d{2}))$/,
+  );
+  if (!match) return false;
+
+  const [, yearText, monthText, dayText, hourText, minuteText, secondText, offsetHourText, offsetMinuteText] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  const second = Number(secondText);
+  const offsetHour = offsetHourText === undefined ? 0 : Number(offsetHourText);
+  const offsetMinute = offsetMinuteText === undefined ? 0 : Number(offsetMinuteText);
+
+  return (
+    year >= 1 &&
+    month >= 1 &&
+    month <= 12 &&
+    day >= 1 &&
+    day <= daysInMonth(year, month) &&
+    hour <= 23 &&
+    minute <= 59 &&
+    second <= 59 &&
+    offsetHour <= 23 &&
+    offsetMinute <= 59
+  );
+}
+
+function daysInMonth(year: number, month: number) {
+  if (month === 2) {
+    const isLeapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+    return isLeapYear ? 29 : 28;
+  }
+  return [4, 6, 9, 11].includes(month) ? 30 : 31;
 }
 
 function isWidgetType(value: unknown): value is WidgetType {

@@ -44,9 +44,9 @@ Planner는 다음 둘 중 하나를 반환한다.
 - provider 데이터, 계산 결과, 투자 메모를 출처 없이 요약하거나 확인 불가능한
   투자 판단으로 단정.
 - provider명, 데이터 출처, 가격/지수 기준 시각, 마지막 갱신 시각, 데이터 상태가
-  있는 입력을 숨기거나 누락된 값을 그럴듯한 문장으로 보완. 단, 현재
-  Dashboard Schema v1이 허용하지 않는 provider metadata 필드를 임의로 emit해서
-  검증을 우회하면 안 된다.
+  있는 입력을 숨기거나 누락된 값을 그럴듯한 문장으로 보완.
+- `provider_metadata` 이외의 임의 data requirement, widget option, column으로
+  provider 정보를 emit해 Dashboard Schema 검증을 우회.
 
 ## Planner 흐름
 
@@ -84,7 +84,8 @@ Planner는 다음 경우 스키마 대신 보완 응답을 반환한다.
 - 같은 입력 질문은 구조적으로 유사한 Dashboard Schema를 생성해야 한다.
 - 모든 출력은 `docs/dashboard-schema-v1.md` 검증 규칙을 통과해야 렌더링된다.
 - 금지 요청은 화면 생성 대신 안전한 거절 또는 보완 질문으로 처리한다.
-- provider 기반 지표의 출처와 갱신 시각 메타데이터 표시 요구는 Dashboard Schema와
-  Widget Registry가 해당 필드를 허용하는 후속 확장 뒤 검증한다. 그 전까지 Planner는
-  provider metadata 필드를 data requirement, widget option, column으로 emit하지 않으며,
-  현재 Schema v1의 허용 필드로 표현할 수 없으면 보완 응답을 반환한다.
+- `source=AI_PLANNER`인 출력은 모든 `data_requirements[*]`에 Dashboard Schema의
+  유효한 `provider_metadata`를 포함해야 한다.
+- Planner가 provider명, 데이터 출처, 마지막 갱신 시각 또는 해당 owner에 적용되는
+  데이터·조회 상태를 확인할 수 없으면 불완전한 스키마를 만들지 않고 보완 응답을
+  반환한다.

@@ -6,6 +6,21 @@ from pydantic import ValidationError
 from app.schemas.dashboard import DashboardErrorResponse, DashboardSchema
 
 
+def provider_metadata() -> dict:
+    return {
+        "attribution": {
+            "provider": "Toss Securities",
+            "source": "BROKER_API",
+            "captured_at": "2026-08-24T09:00:00+09:00",
+            "refreshed_at": "2026-08-24T09:01:00+09:00",
+        },
+        "status": {
+            "data_status": "STALE",
+            "lookup_status": "UNAUTHORIZED",
+        },
+    }
+
+
 @pytest.fixture
 def valid_dashboard_payload() -> dict:
     return {
@@ -80,6 +95,107 @@ def test_dashboard_schema_accepts_frontend_preset_shape(valid_dashboard_payload:
     schema = DashboardSchema.model_validate(valid_dashboard_payload)
 
     assert schema.model_dump(mode="json", exclude_none=True) == valid_dashboard_payload
+
+
+def test_dashboard_schema_accepts_provider_metadata(valid_dashboard_payload: dict) -> None:
+    payload = deepcopy(valid_dashboard_payload)
+    payload["data_requirements"][0]["provider_metadata"] = provider_metadata()
+
+    schema = DashboardSchema.model_validate(payload)
+
+    assert schema.model_dump(mode="json", exclude_none=True) == payload
+
+
+@pytest.mark.parametrize(
+    ("mutation", "expected_error"),
+    [
+        (lambda metadata: metadata.pop("attribution"), "attribution"),
+        (lambda metadata: metadata["attribution"].update(provider=" "), "string_too_short"),
+        (lambda metadata: metadata["attribution"].update(source="REMOTE"), "source"),
+        (
+            lambda metadata: metadata["attribution"].update(
+                refreshed_at="2026-08-24T09:01:00"
+            ),
+            "timezone-aware ISO 8601 string",
+        ),
+        (lambda metadata: metadata["attribution"].update(refreshed_at=0), "ISO 8601 string"),
+        (
+            lambda metadata: metadata["attribution"].update(
+                refreshed_at="2026-02-30T09:01:00Z"
+            ),
+            "valid calendar date",
+        ),
+        (lambda metadata: metadata["status"].update(data_status="FRESH"), "data_status"),
+        (lambda metadata: metadata["status"].update(lookup_status="ERROR"), "lookup_status"),
+        (lambda metadata: metadata["status"].pop("lookup_status"), "require lookup_status"),
+        (lambda metadata: metadata["attribution"].pop("captured_at"), "require captured_at"),
+        (
+            lambda metadata: metadata["attribution"].update(source="MANUAL"),
+            "MANUAL source cannot define lookup_status",
+        ),
+        (lambda metadata: metadata["status"].update(error="token expired"), "extra_forbidden"),
+    ],
+)
+def test_dashboard_schema_rejects_invalid_provider_metadata(
+    valid_dashboard_payload: dict,
+    mutation,
+    expected_error: str,
+) -> None:
+    payload = deepcopy(valid_dashboard_payload)
+    metadata = provider_metadata()
+    mutation(metadata)
+    payload["data_requirements"][0]["provider_metadata"] = metadata
+
+    with pytest.raises(ValidationError) as exc_info:
+        DashboardSchema.model_validate(payload)
+
+    assert expected_error in str(exc_info.value)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("provider_metadata", None),
+        ("captured_at", None),
+        ("data_status", None),
+    ],
+)
+def test_dashboard_schema_rejects_null_optional_provider_metadata_fields(
+    valid_dashboard_payload: dict,
+    field: str,
+    value,
+) -> None:
+    payload = deepcopy(valid_dashboard_payload)
+    metadata = provider_metadata()
+    if field == "provider_metadata":
+        payload["data_requirements"][0][field] = value
+    elif field == "captured_at":
+        metadata["attribution"][field] = value
+        payload["data_requirements"][0]["provider_metadata"] = metadata
+    else:
+        metadata["status"][field] = value
+        payload["data_requirements"][0]["provider_metadata"] = metadata
+
+    with pytest.raises(ValidationError):
+        DashboardSchema.model_validate(payload)
+
+
+def test_dashboard_schema_accepts_local_attribution_without_lookup_status(
+    valid_dashboard_payload: dict,
+) -> None:
+    payload = deepcopy(valid_dashboard_payload)
+    payload["data_requirements"][0]["provider_metadata"] = {
+        "attribution": {
+            "provider": "StockSignalView",
+            "source": "MANUAL",
+            "refreshed_at": "2026-08-24T09:01:00+09:00",
+        },
+        "status": {},
+    }
+
+    schema = DashboardSchema.model_validate(payload)
+
+    assert schema.model_dump(mode="json", exclude_none=True) == payload
 
 
 @pytest.mark.parametrize(
