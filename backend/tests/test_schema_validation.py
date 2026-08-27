@@ -21,6 +21,7 @@ def _provider_metadata() -> dict:
                 {
                     "lookup_type": "HOLDINGS",
                     "target_key": "account-primary",
+                    "target_label": "주 계좌",
                     "lookup_status": "AVAILABLE",
                 }
             ],

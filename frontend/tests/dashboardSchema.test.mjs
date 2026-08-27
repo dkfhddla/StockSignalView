@@ -171,6 +171,9 @@ test("rejects malformed provider metadata", () => {
   const nullTargetLabel = providerMetadata();
   nullTargetLabel.status.lookup_results[0].target_label = null;
 
+  const missingHoldingsTargetLabel = providerMetadata();
+  delete missingHoldingsTargetLabel.status.lookup_results[0].target_label;
+
   const priceLookupWithoutRole = providerMetadata();
   priceLookupWithoutRole.status.lookup_results[0].lookup_type = "PRICE";
 
@@ -224,6 +227,7 @@ test("rejects malformed provider metadata", () => {
     invalidLookupType,
     blankTargetKey,
     nullTargetLabel,
+    missingHoldingsTargetLabel,
     priceLookupWithoutRole,
     holdingsLookupWithRole,
     invalidSnapshotRole,

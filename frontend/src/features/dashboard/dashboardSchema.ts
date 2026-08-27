@@ -491,6 +491,7 @@ function isLookupResultValid(value: unknown): value is DashboardLookupResult {
   } else if (typeof value.target_label !== "string" || value.target_label.trim() === "") {
     return false;
   }
+  if (value.lookup_type === "HOLDINGS" && value.target_label === undefined) return false;
   const requiresSnapshotRole = value.lookup_type !== "HOLDINGS";
   if (value.snapshot_role === undefined) {
     if (Object.hasOwn(value, "snapshot_role")) return false;

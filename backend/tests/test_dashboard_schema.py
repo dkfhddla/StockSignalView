@@ -188,6 +188,12 @@ def test_dashboard_schema_accepts_distinct_price_lookup_roles(
             "target_label must be omitted",
         ),
         (
+            lambda metadata: metadata["status"]["lookup_results"][0].pop(
+                "target_label"
+            ),
+            "HOLDINGS lookup results require target_label",
+        ),
+        (
             lambda metadata: metadata["status"]["lookup_results"][0].update(
                 lookup_type="PRICE"
             ),

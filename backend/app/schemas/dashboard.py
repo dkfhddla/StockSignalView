@@ -152,7 +152,7 @@ class DashboardLookupResult(StrictModel):
         return data
 
     @model_validator(mode="after")
-    def validate_snapshot_role(self) -> DashboardLookupResult:
+    def validate_lookup_contract(self) -> DashboardLookupResult:
         if self.lookup_type in {
             DashboardLookupType.PRICE,
             DashboardLookupType.MARKET_INDEX,
@@ -160,6 +160,8 @@ class DashboardLookupResult(StrictModel):
             raise ValueError("PRICE and MARKET_INDEX lookup results require snapshot_role")
         if self.lookup_type is DashboardLookupType.HOLDINGS and self.snapshot_role is not None:
             raise ValueError("HOLDINGS lookup results cannot define snapshot_role")
+        if self.lookup_type is DashboardLookupType.HOLDINGS and self.target_label is None:
+            raise ValueError("HOLDINGS lookup results require target_label")
         return self
 
 
