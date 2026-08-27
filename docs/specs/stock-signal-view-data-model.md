@@ -223,8 +223,9 @@ provider 조회 또는 내부 provider-normalization 단계의 상태 envelope�
 - `id`: 내부 식별자 또는 요청 단위 식별자
 - `provider`: provider명
 - `lookup_type`: 조회 유형 (`HOLDINGS`, `PRICE`, `MARKET_INDEX`)
-- `lookup_status`: 공통 조회 상태
+- `lookup_status`: 공통 조회 상태 (`AVAILABLE`, `PARTIAL`, `STALE`, `UNAVAILABLE`, `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED`)
 - `target_key`: 조회 대상 키. 보유 조회는 계좌 식별자, 가격 조회는 `provider_symbol` 또는 `stock_id`, 지수 조회는 시장 구분을 사용한다.
+- `snapshot_role`: 가격 또는 지수 조회의 계산 역할 (`CURRENT`, `DAY_BASELINE`, `HOLDING_PERIOD_BASELINE`). `lookup_type`이 `PRICE` 또는 `MARKET_INDEX`이면 필수이고, `HOLDINGS`이면 포함하지 않는다.
 - `error_code`: provider 또는 시스템이 분류한 오류 코드
 - `message`: 사용자에게 표시 가능한 상태 메시지
 - `captured_at`: provider 값의 기준 시각. 값이 없으면 비울 수 있다.
@@ -235,9 +236,11 @@ provider 조회 또는 내부 provider-normalization 단계의 상태 envelope�
 규칙:
 
 - 보유 목록, 가격, 지수 조회가 실패해 owner snapshot을 만들 수 없어도 `ProviderLookupResult`는 실패 원인을 보존해야 한다.
-- 보유 조회의 `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED`, `PARTIAL`, `STALE` 상태는 `ProviderHoldingSnapshot`에 임의 필드를 추가하지 않고 반드시 `ProviderLookupResult.lookup_status`로 전달한다. `PortfolioPosition.calculation_status`는 계산 가능 여부만 나타내며 provider 실패 원인의 저장 위치가 아니다.
-- 가격/지수 조회의 인증 실패와 provider 오류는 `PriceSnapshot.data_status` 또는 `MarketIndexSnapshot.data_status`만으로 표현하지 않고 `ProviderLookupResult.lookup_status`에 보존한다.
+- `lookup_status=AVAILABLE`은 provider 조회가 성공했음을 뜻한다. 이 값은 가격·지수 owner snapshot의 `data_status`를 대체하지 않으며, 성공한 조회의 snapshot도 `STALE` 또는 `UNAVAILABLE`일 수 있다.
+- 보유 조회의 `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED`, `PARTIAL`, `STALE`, `UNAVAILABLE` 상태는 `ProviderHoldingSnapshot`에 임의 필드를 추가하지 않고 반드시 `ProviderLookupResult.lookup_status`로 전달한다. `PortfolioPosition.calculation_status`는 계산 가능 여부만 나타내며 provider 실패 원인의 저장 위치가 아니다.
+- 가격/지수 조회의 인증 실패와 provider 오류는 `PriceSnapshot.data_status` 또는 `MarketIndexSnapshot.data_status`만으로 표현하지 않고 `ProviderLookupResult.lookup_status`에 보존한다. 가격·지수 조회 결과는 동일 `target_key`의 역할별 기준값을 구분하도록 `snapshot_role`을 반드시 함께 보존한다.
 - snapshot이 생성된 경우에도 stale 또는 partial 상태가 있으면 snapshot의 `data_status`와 조회 envelope의 `lookup_status`를 함께 전달할 수 있다.
+- 조회 결과의 대상 식별자는 `HOLDINGS`에서는 `(lookup_type, target_key)`, `PRICE`와 `MARKET_INDEX`에서는 `(lookup_type, target_key, snapshot_role)`로 고유해야 한다.
 
 ### AlertRule
 

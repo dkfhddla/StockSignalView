@@ -62,7 +62,7 @@ provider는 보유 또는 관심 종목의 현재가를 조회할 수 있어야 
 
 provider-only unmapped 보유 종목의 현재가는 내부 `Stock`이 없어도 `provider`, `provider_symbol`, `provider_market`으로 `ProviderHoldingSnapshot.raw_provider_symbol`, `raw_market`에 연결할 수 있어야 한다. 이 연결은 내부 종목 자동 생성이나 임의 병합을 의미하지 않는다.
 
-가격 조회의 인증 실패, 권한 없음, provider 오류, 미지원, 지연 상태는 `PriceSnapshot.data_status`만으로 접지 않고 `ProviderLookupResult.lookup_status`에 원인을 보존해야 한다. snapshot을 만들 수 없는 실패도 조회 결과 envelope로 전달한다.
+가격 조회의 조회 성공은 `ProviderLookupResult.lookup_status=AVAILABLE`로, 인증 실패, 권한 없음, provider 오류, 미지원, 지연 상태는 `PriceSnapshot.data_status`만으로 접지 않고 `ProviderLookupResult.lookup_status`에 보존해야 한다. 가격 조회 결과는 같은 종목의 현재가와 기준가 실패를 구분하도록 해당 `snapshot_role`을 함께 보존한다. snapshot을 만들 수 없는 실패도 조회 결과 envelope로 전달한다.
 
 당일 상대성과를 계산하려면 현재가뿐 아니라 당일 기준 종목 가격(예: 전일 종가 또는 당일 장 시작 기준가), 현재 시장 지수, 당일 기준 시장 지수, 각 값의 기준 시각이 필요하다. provider 또는 내부 가격 스냅샷이 이 기준 입력을 제공하지 못하면 당일 상대성과는 임의로 추정하지 않고 `UNAVAILABLE` 또는 `미산출` 상태로 반환해야 한다.
 
@@ -74,7 +74,7 @@ provider 또는 시장 데이터 소스는 KOSPI와 KOSDAQ 지수 값을 조회�
 
 KOSPI 종목은 KOSPI 지수, KOSDAQ 종목은 KOSDAQ 지수를 기본 비교 기준으로 사용한다. 기준 지수 또는 현재 지수가 없으면 시장 수익률과 상대성과는 계산하지 않는다.
 
-지수 조회의 인증 실패, 권한 없음, provider 오류, 미지원, 지연 상태는 `MarketIndexSnapshot.data_status`만으로 접지 않고 `ProviderLookupResult.lookup_status`에 원인을 보존해야 한다. snapshot을 만들 수 없는 실패도 조회 결과 envelope로 전달한다.
+지수 조회의 조회 성공은 `ProviderLookupResult.lookup_status=AVAILABLE`로, 인증 실패, 권한 없음, provider 오류, 미지원, 지연 상태는 `MarketIndexSnapshot.data_status`만으로 접지 않고 `ProviderLookupResult.lookup_status`에 보존해야 한다. 지수 조회 결과는 같은 시장의 현재 지수와 기준 지수 실패를 구분하도록 해당 `snapshot_role`을 함께 보존한다. snapshot을 만들 수 없는 실패도 조회 결과 envelope로 전달한다.
 
 ### RMP-005 상대성과 계산 연결
 
@@ -146,8 +146,8 @@ Dashboard Schema와 Widget Registry의 상태 표시 계약이 확장된 뒤 대
 
 - [ ] 토스증권 API는 첫 read-only provider 검증 대상으로 문서화되어 있다.
 - [ ] provider adapter는 보유 종목을 `ProviderHoldingSnapshot`, 현재가와 종목 기준가를 `PriceSnapshot`, KOSPI/KOSDAQ 지수를 `MarketIndexSnapshot` owner 용어로 정규화한다.
-- [ ] provider 조회 상태는 `ProviderLookupResult.lookup_status`로 보존하며 `PARTIAL`, `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED`, `STALE`, `UNAVAILABLE`을 구분한다.
-- [ ] provider 가격/지수 결과는 provider명, provider source id 또는 원본 출처, 기준 시각(`captured_at`), 마지막 갱신 시각(`refreshed_at`), 데이터 상태(`data_status`), 스냅샷 역할(`snapshot_role`)을 필수 메타데이터로 포함하고, 실패 원인은 `ProviderLookupResult`에 보존한다.
+- [ ] provider 조회 상태는 `ProviderLookupResult.lookup_status`로 보존하며 `AVAILABLE`, `PARTIAL`, `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED`, `STALE`, `UNAVAILABLE`을 구분한다.
+- [ ] provider 가격/지수 결과는 provider명, provider source id 또는 원본 출처, 기준 시각(`captured_at`), 마지막 갱신 시각(`refreshed_at`), 데이터 상태(`data_status`), 스냅샷 역할(`snapshot_role`)을 필수 메타데이터로 포함하고, 실패 원인은 같은 `target_key`의 역할별 결과를 구분할 수 있도록 `snapshot_role`을 포함한 `ProviderLookupResult`에 보존한다.
 - [ ] provider 보유 조회 결과는 provider명, 계좌 식별자, 원본 종목 정보, 기준 시각(`captured_at`), 마지막 갱신 시각(`refreshed_at`), `ProviderLookupResult.lookup_status`와 계산 결과의 계산 가능 여부를 보존하되 `ProviderHoldingSnapshot`에 없는 필드를 임의로 추가하지 않는다.
 - [ ] provider 보유 종목의 원본 심볼/종목명/시장 구분은 내부 `Stock`으로 매핑되거나, 매핑 불가 시 provider-only unmapped 상태로 보존되며 임의 drop 또는 자동 병합되지 않는다.
 - [ ] provider-only unmapped 보유 종목의 가격은 내부 `Stock` 없이도 `provider`, `provider_symbol`, `provider_market`으로 원본 보유 종목에 연결될 수 있으며, 이 연결은 자동 upsert나 병합을 의미하지 않는다.
