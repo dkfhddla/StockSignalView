@@ -81,6 +81,7 @@ Dashboard Schema는 원본 투자 데이터를 담지 않지만, 각 데이터 �
     "attribution": {
       "provider": "Toss Securities",
       "source": "BROKER_API",
+      "captured_at": "2026-08-24T09:00:00+09:00",
       "refreshed_at": "2026-08-24T09:01:00+09:00"
     },
     "status": {
