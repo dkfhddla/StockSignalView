@@ -71,6 +71,12 @@ class DashboardLookupType(str, Enum):
     MARKET_INDEX = "MARKET_INDEX"
 
 
+class DashboardSnapshotRole(str, Enum):
+    CURRENT = "CURRENT"
+    DAY_BASELINE = "DAY_BASELINE"
+    HOLDING_PERIOD_BASELINE = "HOLDING_PERIOD_BASELINE"
+
+
 class PositionTableColumn(str, Enum):
     STOCK_NAME = "stock_name"
     MARKET = "market"
@@ -132,14 +138,29 @@ class DashboardLookupResult(StrictModel):
     lookup_type: DashboardLookupType
     target_key: NonEmptyString
     target_label: NonEmptyString | None = None
+    snapshot_role: DashboardSnapshotRole | None = None
     lookup_status: DashboardLookupStatus
 
     @model_validator(mode="before")
     @classmethod
-    def reject_null_target_label(cls, data: Any) -> Any:
-        if isinstance(data, dict) and "target_label" in data and data["target_label"] is None:
-            raise ValueError("target_label must be omitted or define a display label")
+    def reject_null_optional_fields(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "target_label" in data and data["target_label"] is None:
+                raise ValueError("target_label must be omitted or define a display label")
+            if "snapshot_role" in data and data["snapshot_role"] is None:
+                raise ValueError("snapshot_role must be omitted or define a supported role")
         return data
+
+    @model_validator(mode="after")
+    def validate_snapshot_role(self) -> DashboardLookupResult:
+        if self.lookup_type in {
+            DashboardLookupType.PRICE,
+            DashboardLookupType.MARKET_INDEX,
+        } and self.snapshot_role is None:
+            raise ValueError("PRICE and MARKET_INDEX lookup results require snapshot_role")
+        if self.lookup_type is DashboardLookupType.HOLDINGS and self.snapshot_role is not None:
+            raise ValueError("HOLDINGS lookup results cannot define snapshot_role")
+        return self
 
 
 class DashboardProviderStatus(StrictModel):
@@ -164,7 +185,8 @@ class DashboardProviderStatus(StrictModel):
             raise ValueError("lookup_results must contain at least one result")
 
         lookup_targets = [
-            (result.lookup_type, result.target_key) for result in self.lookup_results
+            (result.lookup_type, result.target_key, result.snapshot_role)
+            for result in self.lookup_results
         ]
         if len(lookup_targets) != len(set(lookup_targets)):
             raise ValueError("lookup_results targets must be unique")

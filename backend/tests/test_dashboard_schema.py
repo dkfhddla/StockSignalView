@@ -113,6 +113,36 @@ def test_dashboard_schema_accepts_provider_metadata(valid_dashboard_payload: dic
     assert schema.model_dump(mode="json", exclude_none=True) == payload
 
 
+def test_dashboard_schema_accepts_distinct_price_lookup_roles(
+    valid_dashboard_payload: dict,
+) -> None:
+    payload = deepcopy(valid_dashboard_payload)
+    metadata = provider_metadata()
+    metadata["status"]["lookup_results"].extend(
+        [
+            {
+                "lookup_type": "PRICE",
+                "target_key": "stock-005930",
+                "target_label": "삼성전자",
+                "snapshot_role": "CURRENT",
+                "lookup_status": "AVAILABLE",
+            },
+            {
+                "lookup_type": "PRICE",
+                "target_key": "stock-005930",
+                "target_label": "삼성전자",
+                "snapshot_role": "DAY_BASELINE",
+                "lookup_status": "UNAVAILABLE",
+            },
+        ]
+    )
+    payload["data_requirements"][0]["provider_metadata"] = metadata
+
+    schema = DashboardSchema.model_validate(payload)
+
+    assert schema.model_dump(mode="json", exclude_none=True) == payload
+
+
 @pytest.mark.parametrize(
     ("mutation", "expected_error"),
     [
@@ -156,6 +186,30 @@ def test_dashboard_schema_accepts_provider_metadata(valid_dashboard_payload: dic
                 target_label=None
             ),
             "target_label must be omitted",
+        ),
+        (
+            lambda metadata: metadata["status"]["lookup_results"][0].update(
+                lookup_type="PRICE"
+            ),
+            "require snapshot_role",
+        ),
+        (
+            lambda metadata: metadata["status"]["lookup_results"][0].update(
+                snapshot_role="CURRENT"
+            ),
+            "HOLDINGS lookup results cannot define snapshot_role",
+        ),
+        (
+            lambda metadata: metadata["status"]["lookup_results"][0].update(
+                lookup_type="PRICE", snapshot_role="BASELINE"
+            ),
+            "snapshot_role",
+        ),
+        (
+            lambda metadata: metadata["status"]["lookup_results"][0].update(
+                lookup_type="PRICE", snapshot_role=None
+            ),
+            "snapshot_role must be omitted",
         ),
         (
             lambda metadata: metadata["status"].update(lookup_results=[]),

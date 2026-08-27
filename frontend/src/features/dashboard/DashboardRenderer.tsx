@@ -6,6 +6,7 @@ import {
   DashboardLookupResult,
   DashboardLookupStatus,
   DashboardLookupType,
+  DashboardSnapshotRole,
   DashboardProviderMetadata,
   DashboardProviderSource,
   DashboardSchema,
@@ -236,7 +237,7 @@ function ProviderMetadataEntry({
           {status.data_status ? <DataStatusBadge status={status.data_status} /> : null}
           {status.lookup_results?.map((result) => (
             <LookupResultBadge
-              key={`${result.lookup_type}:${result.target_key}`}
+              key={`${result.lookup_type}:${result.target_key}:${result.snapshot_role ?? ""}`}
               result={result}
             />
           ))}
@@ -277,6 +278,12 @@ const lookupTypeLabels: Record<DashboardLookupType, string> = {
   MARKET_INDEX: "시장 지수 조회",
 };
 
+const snapshotRoleLabels: Record<DashboardSnapshotRole, string> = {
+  CURRENT: "현재값",
+  DAY_BASELINE: "당일 기준",
+  HOLDING_PERIOD_BASELINE: "보유기간 기준",
+};
+
 function DataStatusBadge({ status }: { status: DashboardDataStatus }) {
   const tone = status === "AVAILABLE" ? "normal" : status === "STALE" ? "warning" : "error";
 
@@ -301,10 +308,13 @@ function LookupResultBadge({ result }: { result: DashboardLookupResult }) {
   const targetLabel = result.target_label
     ? `${lookupTypeLabels[result.lookup_type]} · ${result.target_label}`
     : lookupTypeLabels[result.lookup_type];
+  const displayLabel = result.snapshot_role
+    ? `${targetLabel} · ${snapshotRoleLabels[result.snapshot_role]}`
+    : targetLabel;
 
   return (
     <span className="provider-lookup-result">
-      <span className="provider-lookup-target">{targetLabel}</span>
+      <span className="provider-lookup-target">{displayLabel}</span>
       <LookupStatusBadge status={result.lookup_status} />
     </span>
   );

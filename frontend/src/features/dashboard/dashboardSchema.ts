@@ -21,10 +21,12 @@ export type DashboardLookupStatus =
   | "PROVIDER_ERROR"
   | "UNSUPPORTED";
 export type DashboardLookupType = "HOLDINGS" | "PRICE" | "MARKET_INDEX";
+export type DashboardSnapshotRole = "CURRENT" | "DAY_BASELINE" | "HOLDING_PERIOD_BASELINE";
 export type DashboardLookupResult = {
   lookup_type: DashboardLookupType;
   target_key: string;
   target_label?: string;
+  snapshot_role?: DashboardSnapshotRole;
   lookup_status: DashboardLookupStatus;
 };
 
@@ -205,6 +207,7 @@ const lookupStatuses: DashboardLookupStatus[] = [
   "UNSUPPORTED",
 ];
 const lookupTypes: DashboardLookupType[] = ["HOLDINGS", "PRICE", "MARKET_INDEX"];
+const snapshotRoles: DashboardSnapshotRole[] = ["CURRENT", "DAY_BASELINE", "HOLDING_PERIOD_BASELINE"];
 
 export function validateDashboardSchema(schema: unknown): RendererStatus {
   if (!isRecord(schema)) return "INVALID_SCHEMA";
@@ -303,7 +306,7 @@ function isProviderMetadataValid(metadata: unknown): metadata is DashboardProvid
       return false;
     }
     const lookupTargets = metadata.status.lookup_results.map(
-      (result) => `${result.lookup_type}:${result.target_key.trim()}`,
+      (result) => `${result.lookup_type}:${result.target_key.trim()}:${result.snapshot_role ?? ""}`,
     );
     if (!hasUniqueValues(lookupTargets)) return false;
   }
@@ -478,7 +481,7 @@ function isLookupStatus(value: unknown): value is DashboardLookupStatus {
 
 function isLookupResultValid(value: unknown): value is DashboardLookupResult {
   if (!isRecord(value)) return false;
-  if (!hasOnlyOptionKeys(value, ["lookup_type", "target_key", "target_label", "lookup_status"])) {
+  if (!hasOnlyOptionKeys(value, ["lookup_type", "target_key", "target_label", "snapshot_role", "lookup_status"])) {
     return false;
   }
   if (!isLookupType(value.lookup_type)) return false;
@@ -488,11 +491,22 @@ function isLookupResultValid(value: unknown): value is DashboardLookupResult {
   } else if (typeof value.target_label !== "string" || value.target_label.trim() === "") {
     return false;
   }
+  const requiresSnapshotRole = value.lookup_type !== "HOLDINGS";
+  if (value.snapshot_role === undefined) {
+    if (Object.hasOwn(value, "snapshot_role")) return false;
+    if (requiresSnapshotRole) return false;
+  } else if (!requiresSnapshotRole || !isSnapshotRole(value.snapshot_role)) {
+    return false;
+  }
   return isLookupStatus(value.lookup_status);
 }
 
 function isLookupType(value: unknown): value is DashboardLookupType {
   return typeof value === "string" && lookupTypes.includes(value as DashboardLookupType);
+}
+
+function isSnapshotRole(value: unknown): value is DashboardSnapshotRole {
+  return typeof value === "string" && snapshotRoles.includes(value as DashboardSnapshotRole);
 }
 
 function isAwareTimestamp(value: unknown) {

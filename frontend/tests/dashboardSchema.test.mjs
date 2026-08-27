@@ -115,6 +115,28 @@ test("accepts provider attribution and independent statuses", () => {
   assert.equal(validateDashboardSchema(schema), "READY");
 });
 
+test("accepts distinct price lookup roles for the same target", () => {
+  const metadata = providerMetadata();
+  metadata.status.lookup_results.push(
+    {
+      lookup_type: "PRICE",
+      target_key: "stock-005930",
+      target_label: "삼성전자",
+      snapshot_role: "CURRENT",
+      lookup_status: "AVAILABLE",
+    },
+    {
+      lookup_type: "PRICE",
+      target_key: "stock-005930",
+      target_label: "삼성전자",
+      snapshot_role: "DAY_BASELINE",
+      lookup_status: "UNAVAILABLE",
+    },
+  );
+
+  assert.equal(validateDashboardSchema(withProviderMetadata(metadata)), "READY");
+});
+
 test("rejects malformed provider metadata", () => {
   const missingAttribution = providerMetadata();
   delete missingAttribution.attribution;
@@ -148,6 +170,20 @@ test("rejects malformed provider metadata", () => {
 
   const nullTargetLabel = providerMetadata();
   nullTargetLabel.status.lookup_results[0].target_label = null;
+
+  const priceLookupWithoutRole = providerMetadata();
+  priceLookupWithoutRole.status.lookup_results[0].lookup_type = "PRICE";
+
+  const holdingsLookupWithRole = providerMetadata();
+  holdingsLookupWithRole.status.lookup_results[0].snapshot_role = "CURRENT";
+
+  const invalidSnapshotRole = providerMetadata();
+  invalidSnapshotRole.status.lookup_results[0].lookup_type = "PRICE";
+  invalidSnapshotRole.status.lookup_results[0].snapshot_role = "BASELINE";
+
+  const nullSnapshotRole = providerMetadata();
+  nullSnapshotRole.status.lookup_results[0].lookup_type = "PRICE";
+  nullSnapshotRole.status.lookup_results[0].snapshot_role = null;
 
   const emptyLookupResults = providerMetadata();
   emptyLookupResults.status.lookup_results = [];
@@ -188,6 +224,10 @@ test("rejects malformed provider metadata", () => {
     invalidLookupType,
     blankTargetKey,
     nullTargetLabel,
+    priceLookupWithoutRole,
+    holdingsLookupWithRole,
+    invalidSnapshotRole,
+    nullSnapshotRole,
     emptyLookupResults,
     duplicateLookupTarget,
     missingProviderLookupResults,
@@ -278,12 +318,14 @@ test("renders each lookup result with a safe target label", () => {
       lookup_type: "PRICE",
       target_key: "sensitive-provider-symbol",
       target_label: "삼성전자",
+      snapshot_role: "CURRENT",
       lookup_status: "STALE",
     },
     {
       lookup_type: "MARKET_INDEX",
       target_key: "market-kospi",
       target_label: "KOSPI",
+      snapshot_role: "DAY_BASELINE",
       lookup_status: "PROVIDER_ERROR",
     },
   );
@@ -291,8 +333,10 @@ test("renders each lookup result with a safe target label", () => {
 
   assert.match(markup, /가격 조회/);
   assert.match(markup, /삼성전자/);
+  assert.match(markup, /현재값/);
   assert.match(markup, /시장 지수 조회/);
   assert.match(markup, /KOSPI/);
+  assert.match(markup, /당일 기준/);
   assert.doesNotMatch(markup, /sensitive-provider-symbol/);
   assert.doesNotMatch(markup, /market-kospi/);
 });
