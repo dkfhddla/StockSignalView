@@ -53,8 +53,10 @@ export function PositionCards({
               <dt>평균가</dt>
               <dd className="average-cost">
                 <span className="average-cost-value">{formatAverageCost(holding.quantity, holding.averagePrice)}</span>
-                {hasAverageCost(holding.quantity, holding.averagePrice) && holding.costBasisSource ? (
-                  <span className="cost-basis-source">{formatCostBasisSource(holding.costBasisSource)}</span>
+                {hasAverageCost(holding.quantity, holding.averagePrice) ? (
+                  <span className="cost-basis-source">
+                    {formatCostBasisSource(holding.costBasisSource ?? "UNKNOWN")}
+                  </span>
                 ) : null}
               </dd>
             </div>

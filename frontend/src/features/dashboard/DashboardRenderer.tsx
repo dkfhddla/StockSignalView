@@ -102,9 +102,10 @@ function WidgetRenderer({
   widget: DashboardWidget;
   positions: Holding[];
 }) {
+  const requirements = getWidgetDataRequirements(widget, dataRequirements);
   const metadataPanel = (
     <ProviderMetadataPanel
-      requirements={getWidgetDataRequirements(widget, dataRequirements)}
+      requirements={requirements}
       title={widget.title}
     />
   );
@@ -117,23 +118,32 @@ function WidgetRenderer({
     );
   }
 
+  const resolvedPositions = resolvePositionAvailability(positions, requirements);
+  if (resolvedPositions.unavailable) {
+    return (
+      <WidgetFrame metadataPanel={metadataPanel}>
+        <ProviderDataUnavailable title={widget.title} />
+      </WidgetFrame>
+    );
+  }
+
   switch (widget.type) {
     case "position_summary":
       return (
         <WidgetFrame metadataPanel={metadataPanel}>
-          <PositionSummary options={widget.options} positions={positions} title={widget.title} />
+          <PositionSummary options={widget.options} positions={resolvedPositions.positions} title={widget.title} />
         </WidgetFrame>
       );
     case "position_table":
       return (
         <WidgetFrame metadataPanel={metadataPanel} visibility="desktop-only">
-          <PositionTable options={widget.options} positions={positions} title={widget.title} />
+          <PositionTable options={widget.options} positions={resolvedPositions.positions} title={widget.title} />
         </WidgetFrame>
       );
     case "position_cards":
       return (
         <WidgetFrame metadataPanel={metadataPanel} visibility="mobile-only">
-          <PositionCards options={widget.options} positions={positions} title={widget.title} />
+          <PositionCards options={widget.options} positions={resolvedPositions.positions} title={widget.title} />
         </WidgetFrame>
       );
   }
@@ -178,7 +188,7 @@ function ProviderMetadataPanel({
 }) {
   const entries = requirements.flatMap((requirement) =>
     requirement.provider_metadata
-      ? [{ dataKey: requirement.key, metadata: requirement.provider_metadata }]
+      ? [{ dataKey: requirement.key, dataType: requirement.type, metadata: requirement.provider_metadata }]
       : [],
   );
 
@@ -186,9 +196,10 @@ function ProviderMetadataPanel({
 
   return (
     <aside className="provider-metadata" aria-label={`${title} 데이터 출처`}>
-      {entries.map(({ dataKey, metadata }) => (
+      {entries.map(({ dataKey, dataType, metadata }) => (
         <ProviderMetadataEntry
           dataKey={dataKey}
+          dataType={dataType}
           key={dataKey}
           metadata={metadata}
           showDataKey={entries.length > 1}
@@ -200,14 +211,17 @@ function ProviderMetadataPanel({
 
 function ProviderMetadataEntry({
   dataKey,
+  dataType,
   metadata,
   showDataKey,
 }: {
   dataKey: string;
+  dataType: DashboardDataRequirement["type"];
   metadata: DashboardProviderMetadata;
   showDataKey: boolean;
 }) {
   const { attribution, status } = metadata;
+  const capturedAtLabel = dataType === "portfolio_positions" ? "보유 현황 기준" : "값 기준";
 
   return (
     <div className="provider-metadata-entry">
@@ -219,7 +233,7 @@ function ProviderMetadataEntry({
       <dl className="provider-timestamps">
         {attribution.captured_at ? (
           <div>
-            <dt>값 기준</dt>
+            <dt>{capturedAtLabel}</dt>
             <dd>
               <time dateTime={attribution.captured_at}>{formatProviderTimestamp(attribution.captured_at)}</time>
             </dd>
@@ -317,6 +331,65 @@ function LookupResultBadge({ result }: { result: DashboardLookupResult }) {
       <span className="provider-lookup-target">{displayLabel}</span>
       <LookupStatusBadge status={result.lookup_status} />
     </span>
+  );
+}
+
+const unavailableLookupStatuses: DashboardLookupStatus[] = [
+  "UNAVAILABLE",
+  "UNAUTHORIZED",
+  "FORBIDDEN",
+  "PROVIDER_ERROR",
+  "UNSUPPORTED",
+];
+
+function resolvePositionAvailability(
+  positions: Holding[],
+  requirements: DashboardDataRequirement[],
+) {
+  const lookupResults = requirements.flatMap(
+    (requirement) => requirement.provider_metadata?.status.lookup_results ?? [],
+  );
+  const hasUnavailableHoldings = lookupResults.some(
+    (result) => result.lookup_type === "HOLDINGS" && unavailableLookupStatuses.includes(result.lookup_status),
+  );
+  if (hasUnavailableHoldings) return { unavailable: true, positions: [] };
+
+  const unavailablePriceTargets = new Set(
+    lookupResults
+      .filter(
+        (result) => result.lookup_type === "PRICE" && unavailableLookupStatuses.includes(result.lookup_status),
+      )
+      .map((result) => result.target_key),
+  );
+
+  return {
+    unavailable: false,
+    positions: positions.map((holding) =>
+      unavailablePriceTargets.has(holding.id) ? toUnavailablePosition(holding) : holding,
+    ),
+  };
+}
+
+function toUnavailablePosition(holding: Holding): Holding {
+  return {
+    ...holding,
+    currentPrice: null,
+    valuation: null,
+    unrealizedProfit: null,
+    stockReturn: null,
+    marketReturn: null,
+    relativeReturn: null,
+    weight: null,
+    alertState: "데이터 부족",
+  };
+}
+
+function ProviderDataUnavailable({ title }: { title: string }) {
+  return (
+    <section className="widget-placeholder" aria-label={title}>
+      <h2 className="widget-title">{title}</h2>
+      <p>보유 데이터를 표시할 수 없습니다.</p>
+    </section>
   );
 }
 

@@ -162,6 +162,12 @@ class DashboardLookupResult(StrictModel):
             raise ValueError("HOLDINGS lookup results cannot define snapshot_role")
         if self.lookup_type is DashboardLookupType.HOLDINGS and self.target_label is None:
             raise ValueError("HOLDINGS lookup results require target_label")
+        if (
+            self.lookup_type is DashboardLookupType.HOLDINGS
+            and self.target_label is not None
+            and self.target_label.strip() == self.target_key.strip()
+        ):
+            raise ValueError("HOLDINGS target_label must not expose target_key")
         return self
 
 
@@ -218,6 +224,31 @@ class DashboardProviderMetadata(StrictModel):
             and self.attribution.captured_at is None
         ):
             raise ValueError("AVAILABLE and STALE data require captured_at")
+        lookup_results = self.status.lookup_results or []
+        if (
+            any(
+                result.lookup_type is DashboardLookupType.HOLDINGS
+                and result.lookup_status is DashboardLookupStatus.AVAILABLE
+                for result in lookup_results
+            )
+            and self.attribution.captured_at is None
+        ):
+            raise ValueError("AVAILABLE HOLDINGS lookup results require captured_at")
+        snapshot_lookup_count = sum(
+            result.lookup_type
+            in {DashboardLookupType.PRICE, DashboardLookupType.MARKET_INDEX}
+            for result in lookup_results
+        )
+        if (
+            snapshot_lookup_count > 1
+            and (
+                self.status.data_status is not None
+                or self.attribution.captured_at is not None
+            )
+        ):
+            raise ValueError(
+                "scalar data_status and captured_at cannot represent multiple snapshot lookups"
+            )
         return self
 
 

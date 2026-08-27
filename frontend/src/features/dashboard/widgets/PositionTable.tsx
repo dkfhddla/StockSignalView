@@ -57,8 +57,10 @@ const columns: ColumnDefinition[] = [
       return (
         <span className="average-cost">
           <span className="average-cost-value">{formatAverageCost(holding.quantity, holding.averagePrice)}</span>
-          {averageCostAvailable && holding.costBasisSource ? (
-            <span className="cost-basis-source">{formatCostBasisSource(holding.costBasisSource)}</span>
+          {averageCostAvailable ? (
+            <span className="cost-basis-source">
+              {formatCostBasisSource(holding.costBasisSource ?? "UNKNOWN")}
+            </span>
           ) : null}
         </span>
       );

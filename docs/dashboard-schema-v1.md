@@ -103,7 +103,7 @@ Dashboard Schema는 원본 투자 데이터를 담지 않지만, 각 데이터 �
 
 - `provider`: 데이터를 공급한 provider 또는 내부 입력 주체의 비어 있지 않은 표시 이름이다.
 - `source`: `MANUAL`, `BROKER_API`, `MARKET_API`, `IMPORT`, `MOCK` 중 하나다.
-- `captured_at`: owner 값의 기준 시각이다. 값이 없는 조회 실패에서는 생략할 수 있다.
+- `captured_at`: owner 값의 기준 시각이다. 값이 없는 조회 실패에서는 생략할 수 있지만, `AVAILABLE` 보유 조회와 `AVAILABLE`·`STALE` 스냅샷 데이터에서는 필수다.
 - `refreshed_at`: provider 조회 또는 내부 입력의 마지막 갱신 시각이며 필수다.
 - 두 시각은 `YYYY-MM-DDTHH:mm:ssZ` 형식이며 초 뒤에 1~6자리 소수와 `Z` 대신 `±HH:mm` 시간대 offset을 허용한다. 숫자 timestamp와 실제 달력에 없는 날짜는 거부하며 선택 필드는 `null` 대신 생략한다.
 
@@ -121,7 +121,7 @@ Owner 데이터 필드:
 
 `status` 필드:
 
-- `data_status`: 스냅샷 값이 연결된 경우에만 사용하며 `AVAILABLE`, `STALE`, `UNAVAILABLE` 중 하나다. `AVAILABLE` 또는 `STALE`이면 `captured_at`이 필수다.
+- `data_status`: 스냅샷 값이 연결된 경우에만 사용하며 `AVAILABLE`, `STALE`, `UNAVAILABLE` 중 하나다. `AVAILABLE` 또는 `STALE`이면 `captured_at`이 필수다. 이 스칼라 상태와 `captured_at`은 하나의 가격 또는 지수 스냅샷만 설명한다.
 - `lookup_results`: `ProviderLookupResult` 배열이다. `BROKER_API` 또는 `MARKET_API` 출처에서는 하나 이상이 필수이고, `IMPORT`와 `MOCK`에서는 해당 owner 조회 결과가 있을 때만 사용하며, `MANUAL`에서는 허용하지 않는다.
 - 허용 상태의 의미는 `docs/specs/stock-signal-view-data-model.md`가 소유한다.
 - Dashboard Schema는 `data_status`와 각 조회 결과의 `lookup_status`를 별도 필드로 보존하고 검증한다. Widget Registry는 위젯의 상태 노출 조건을 소유하고, `docs/ui/components.md`는 각 상태의 표시 라벨과 배지 매핑을 소유한다.
@@ -134,7 +134,7 @@ Owner 데이터 필드:
 - `snapshot_role`: `PRICE`와 `MARKET_INDEX`에서는 `CURRENT`, `DAY_BASELINE`, `HOLDING_PERIOD_BASELINE` 중 하나로 필수다. `HOLDINGS`에서는 포함하지 않는다.
 - `lookup_status`: `AVAILABLE`, `PARTIAL`, `STALE`, `UNAVAILABLE`, `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED` 중 하나다.
 
-`lookup_type`, `target_key`, `lookup_status`는 하나의 `ProviderLookupResult` 묶음으로 함께 보존하고 검증한다. `HOLDINGS`에는 안전한 `target_label`도 같은 묶음에 필수로 포함해 snapshot 없는 실패에도 계좌를 식별한다. 가격·지수 조회 결과에는 `snapshot_role`도 같은 묶음에 필수로 포함해 같은 대상의 현재값과 기준값 조회 상태를 구분한다. 보유 조회 결과에는 `snapshot_role`을 포함하지 않는다. 한 데이터 묶음에 여러 조회 결과가 연결되면 각 결과를 독립 레코드로 유지해야 하며, 상태와 대상 식별자를 서로 다른 병렬 배열이나 데이터 묶음 전체의 단일 상태로 축약해서는 안 된다. Owner 모델의 조회 결과는 `HOLDINGS`에서 `(provider, lookup_type, target_key)`, 가격·지수에서 `(provider, lookup_type, target_key, snapshot_role)` 조합으로 고유하다. 이 Schema의 `lookup_results`는 하나의 `attribution.provider`에 속하므로 같은 배열 안에서는 provider를 제외한 나머지 조합으로 고유해야 하며, 다른 provider 결과는 별도 `provider_metadata`로 전달한다. `target_key`는 상태를 올바른 행이나 계산 입력에 연결하기 위한 값이며, 계좌 식별자처럼 사용자에게 직접 표시하면 안 되는 값은 안전한 대상 라벨로 변환한다.
+`lookup_type`, `target_key`, `lookup_status`는 하나의 `ProviderLookupResult` 묶음으로 함께 보존하고 검증한다. `HOLDINGS`에는 안전한 `target_label`도 같은 묶음에 필수로 포함해 snapshot 없는 실패에도 계좌를 식별하며, `target_label`은 `target_key`와 같을 수 없다. `lookup_status=AVAILABLE`인 보유 조회에는 `captured_at`도 필수다. 가격·지수 조회 결과에는 `snapshot_role`도 같은 묶음에 필수로 포함해 같은 대상의 현재값과 기준값 조회 상태를 구분한다. 보유 조회 결과에는 `snapshot_role`을 포함하지 않는다. 한 데이터 묶음에 여러 조회 결과가 연결되면 각 결과를 독립 레코드로 유지해야 하며, 상태와 대상 식별자를 서로 다른 병렬 배열이나 데이터 묶음 전체의 단일 상태로 축약해서는 안 된다. 가격·지수 조회 결과가 둘 이상이면 스칼라 `data_status`와 `captured_at`을 함께 제공할 수 없다. 역할별 스냅샷 상태와 기준 시각을 담는 owner별 계약을 확장하기 전에는 이 조합을 거부한다. Owner 모델의 조회 결과는 `HOLDINGS`에서 `(provider, lookup_type, target_key)`, 가격·지수에서 `(provider, lookup_type, target_key, snapshot_role)` 조합으로 고유하다. 이 Schema의 `lookup_results`는 하나의 `attribution.provider`에 속하므로 같은 배열 안에서는 provider를 제외한 나머지 조합으로 고유해야 하며, 다른 provider 결과는 별도 `provider_metadata`로 전달한다. `target_key`는 상태를 올바른 행이나 계산 입력에 연결하기 위한 값이며, 계좌 식별자처럼 사용자에게 직접 표시하면 안 되는 값은 안전한 대상 라벨로 변환한다.
 
 Provider 데이터와 연결된 요구사항은 `provider_metadata`를 포함해야 한다. Provider 데이터가 없는 기존 로컬 `PRESET`과 `USER_SAVED` 스키마는 호환성을 위해 이를 생략할 수 있지만, `AI_PLANNER` 스키마는 모든 데이터 요구사항에 유효한 `provider_metadata`를 포함해야 한다. Planner가 출처나 갱신 시각을 확인할 수 없으면 스키마 대신 보완 응답을 반환한다. 수동·가져오기·모의 데이터에는 존재하지 않는 provider 조회 상태를 만들지 않는다.
 
@@ -193,10 +193,10 @@ Provider 데이터와 연결된 요구사항은 `provider_metadata`를 포함해
 - `provider_metadata`가 있으면 `attribution`과 `status`의 허용 필드만 포함해야 한다.
 - `provider_metadata`의 필수 값, 상태 토큰, 시간대 포함 시각이 유효하지 않으면 거부한다.
 - `BROKER_API` 또는 `MARKET_API` 출처에 `lookup_results`가 없으면 거부한다.
-- `MANUAL` 출처에 `lookup_results`가 있거나 `AVAILABLE`·`STALE` 데이터에 `captured_at`이 없으면 거부한다.
+- `MANUAL` 출처에 `lookup_results`가 있거나 `AVAILABLE` 보유 조회와 `AVAILABLE`·`STALE` 데이터에 `captured_at`이 없으면 거부한다.
 - Dashboard Schema의 `source`가 `AI_PLANNER`인데 하나 이상의 데이터 요구사항에 `provider_metadata`가 없으면 거부한다.
 - 임의 상태 필드처럼 계약에 없는 provider metadata 필드는 거부한다.
-- 각 `lookup_results[*]`에는 유효한 `lookup_type`, `target_key`, `lookup_status`가 있어야 한다. 가격·지수 결과에는 유효한 `snapshot_role`이 있어야 하고, 보유 결과에는 없어야 하며 snapshot 없는 실패에도 안전한 계좌 `target_label`이 있어야 한다. 여러 조회 결과의 대상·역할·상태가 서로 뒤섞이면 스키마를 거부한다.
+- 각 `lookup_results[*]`에는 유효한 `lookup_type`, `target_key`, `lookup_status`가 있어야 한다. 가격·지수 결과에는 유효한 `snapshot_role`이 있어야 하고, 보유 결과에는 없어야 하며 snapshot 없는 실패에도 안전한 계좌 `target_label`이 있어야 한다. 보유 라벨이 내부 `target_key`와 같거나 둘 이상의 가격·지수 결과가 스칼라 `data_status` 또는 `captured_at`을 공유하면 스키마를 거부한다.
 - Schema 검증 뒤 Data Binder가 연결한 provider 응답의 값이나 메타데이터가 없거나 유효하지 않은 경우는 `INVALID_SCHEMA`로 분류하지 않는다. 런타임 데이터 상태 처리는 `docs/dynamic-view-renderer.md`가 소유한다.
 - `widgets[*].widget_id`는 대시보드 안에서 고유해야 한다.
 - `widgets[*].type`이 위젯 레지스트리에 없으면 거부한다.

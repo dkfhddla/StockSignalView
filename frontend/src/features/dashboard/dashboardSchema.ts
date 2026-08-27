@@ -309,6 +309,23 @@ function isProviderMetadataValid(metadata: unknown): metadata is DashboardProvid
       (result) => `${result.lookup_type}:${result.target_key.trim()}:${result.snapshot_role ?? ""}`,
     );
     if (!hasUniqueValues(lookupTargets)) return false;
+    if (
+      metadata.status.lookup_results.some(
+        (result) => result.lookup_type === "HOLDINGS" && result.lookup_status === "AVAILABLE",
+      ) &&
+      metadata.attribution.captured_at === undefined
+    ) {
+      return false;
+    }
+    const snapshotLookupCount = metadata.status.lookup_results.filter(
+      (result) => result.lookup_type === "PRICE" || result.lookup_type === "MARKET_INDEX",
+    ).length;
+    if (
+      snapshotLookupCount > 1 &&
+      (metadata.status.data_status !== undefined || metadata.attribution.captured_at !== undefined)
+    ) {
+      return false;
+    }
   }
   if (metadata.attribution.source === "MANUAL" && metadata.status.lookup_results !== undefined) {
     return false;
@@ -492,6 +509,9 @@ function isLookupResultValid(value: unknown): value is DashboardLookupResult {
     return false;
   }
   if (value.lookup_type === "HOLDINGS" && value.target_label === undefined) return false;
+  if (value.lookup_type === "HOLDINGS" && value.target_label?.trim() === value.target_key.trim()) {
+    return false;
+  }
   const requiresSnapshotRole = value.lookup_type !== "HOLDINGS";
   if (value.snapshot_role === undefined) {
     if (Object.hasOwn(value, "snapshot_role")) return false;

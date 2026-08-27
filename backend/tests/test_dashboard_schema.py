@@ -113,7 +113,7 @@ def test_dashboard_schema_accepts_provider_metadata(valid_dashboard_payload: dic
     assert schema.model_dump(mode="json", exclude_none=True) == payload
 
 
-def test_dashboard_schema_accepts_distinct_price_lookup_roles(
+def test_dashboard_schema_rejects_scalar_snapshot_metadata_for_distinct_roles(
     valid_dashboard_payload: dict,
 ) -> None:
     payload = deepcopy(valid_dashboard_payload)
@@ -138,9 +138,26 @@ def test_dashboard_schema_accepts_distinct_price_lookup_roles(
     )
     payload["data_requirements"][0]["provider_metadata"] = metadata
 
-    schema = DashboardSchema.model_validate(payload)
+    with pytest.raises(ValidationError) as exc_info:
+        DashboardSchema.model_validate(payload)
 
-    assert schema.model_dump(mode="json", exclude_none=True) == payload
+    assert "cannot represent multiple snapshot lookups" in str(exc_info.value)
+
+
+def test_dashboard_schema_requires_captured_at_for_available_holdings(
+    valid_dashboard_payload: dict,
+) -> None:
+    payload = deepcopy(valid_dashboard_payload)
+    metadata = provider_metadata()
+    metadata["attribution"].pop("captured_at")
+    metadata["status"].pop("data_status")
+    metadata["status"]["lookup_results"][0]["lookup_status"] = "AVAILABLE"
+    payload["data_requirements"][0]["provider_metadata"] = metadata
+
+    with pytest.raises(ValidationError) as exc_info:
+        DashboardSchema.model_validate(payload)
+
+    assert "AVAILABLE HOLDINGS lookup results require captured_at" in str(exc_info.value)
 
 
 @pytest.mark.parametrize(
@@ -192,6 +209,12 @@ def test_dashboard_schema_accepts_distinct_price_lookup_roles(
                 "target_label"
             ),
             "HOLDINGS lookup results require target_label",
+        ),
+        (
+            lambda metadata: metadata["status"]["lookup_results"][0].update(
+                target_label=metadata["status"]["lookup_results"][0]["target_key"]
+            ),
+            "HOLDINGS target_label must not expose target_key",
         ),
         (
             lambda metadata: metadata["status"]["lookup_results"][0].update(
