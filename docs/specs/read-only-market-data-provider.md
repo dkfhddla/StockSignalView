@@ -62,7 +62,7 @@ provider는 보유 또는 관심 종목의 현재가를 조회할 수 있어야 
 
 provider-only unmapped 보유 종목의 현재가는 내부 `Stock`이 없어도 `provider`, `provider_symbol`, `provider_market`으로 `ProviderHoldingSnapshot.raw_provider_symbol`, `raw_market`에 연결할 수 있어야 한다. 이 연결은 내부 종목 자동 생성이나 임의 병합을 의미하지 않는다.
 
-가격 조회의 조회 성공은 `ProviderLookupResult.lookup_status=AVAILABLE`로, 인증 실패, 권한 없음, provider 오류, 미지원, 지연 상태는 `PriceSnapshot.data_status`만으로 접지 않고 `ProviderLookupResult.lookup_status`에 보존해야 한다. 가격 조회 결과는 같은 종목의 현재가와 기준가 실패를 구분하도록 해당 `snapshot_role`을 함께 보존한다. snapshot을 만들 수 없는 실패도 조회 결과 envelope로 전달한다.
+가격 조회의 조회 성공은 `ProviderLookupResult.lookup_status=AVAILABLE`로, 인증 실패, 권한 없음, provider 오류, 미지원, 지연 상태는 `PriceSnapshot.data_status`만으로 접지 않고 `ProviderLookupResult.lookup_status`에 보존해야 한다. provider-only 가격 조회 결과는 `provider_market`과 `provider_symbol`을 함께 포함한 충돌 없는 `target_key`를 사용해야 한다. 가격 조회 결과는 같은 종목의 현재가와 기준가 실패를 구분하도록 해당 `snapshot_role`을 함께 보존한다. snapshot을 만들 수 없는 실패도 조회 결과 envelope로 전달한다.
 
 당일 상대성과를 계산하려면 현재가뿐 아니라 당일 기준 종목 가격(예: 전일 종가 또는 당일 장 시작 기준가), 현재 시장 지수, 당일 기준 시장 지수, 각 값의 기준 시각이 필요하다. provider 또는 내부 가격 스냅샷이 이 기준 입력을 제공하지 못하면 당일 상대성과는 임의로 추정하지 않고 `UNAVAILABLE` 또는 `미산출` 상태로 반환해야 한다.
 
