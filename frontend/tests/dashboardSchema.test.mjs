@@ -20,6 +20,7 @@ const { DashboardSchemaValidationError, fetchDefaultDashboard } = await vite.ssr
 const { DashboardRenderer } = await vite.ssrLoadModule(
   "/src/features/dashboard/DashboardRenderer.tsx",
 );
+const { holdings } = await vite.ssrLoadModule("/src/features/dashboard/mockPortfolio.ts");
 
 after(async () => {
   await vite.close();
@@ -402,6 +403,41 @@ test("renders cost basis source beside average cost in table and cards", () => {
   assert.match(markup, /provider 제공 원가/);
   assert.match(markup, /거래 원장 계산 원가/);
   assert.match(markup, /원가 근거 확인 필요/);
+});
+
+test("renders unavailable average cost for watchlist positions", () => {
+  const schema = validSchema();
+  schema.widgets = [
+    {
+      widget_id: "positions-table",
+      type: "position_table",
+      title: "보유 종목",
+      data_key: "positions",
+      layout: { desktop_span: 12, mobile_order: 1 },
+      options: {
+        columns: ["stock_name", "average_cost"],
+        sort: { field: "average_cost", direction: "desc" },
+      },
+    },
+    {
+      widget_id: "positions-cards",
+      type: "position_cards",
+      title: "보유 종목 카드",
+      data_key: "positions",
+      layout: { desktop_span: 12, mobile_order: 2 },
+      options: {
+        primary_metric: "relative_return_rate",
+        show_memo_badge: false,
+        filter_strength: "ALL",
+      },
+    },
+  ];
+  const watchlistPosition = holdings.find((holding) => holding.quantity === 0);
+  const markup = renderDashboard(schema, [watchlistPosition]);
+
+  assert.match(markup, /SK하이닉스/);
+  assert.match(markup, /계산 불가/);
+  assert.doesNotMatch(markup, /0원/);
 });
 
 test("does not render unattributed AI summaries", () => {

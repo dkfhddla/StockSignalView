@@ -1,5 +1,12 @@
 import { Holding } from "../mockPortfolio";
-import { formatCostBasisSource, formatCurrency, formatPercent, getTone } from "./formatters";
+import {
+  formatAverageCost,
+  formatCostBasisSource,
+  formatCurrency,
+  formatPercent,
+  getTone,
+  hasAverageCost,
+} from "./formatters";
 import { StatusBadge } from "./StatusBadge";
 
 type PositionCardsOptions = {
@@ -45,8 +52,8 @@ export function PositionCards({
             <div className="card-average-cost">
               <dt>평균가</dt>
               <dd className="average-cost">
-                <span className="average-cost-value">{formatCurrency(holding.averagePrice)}</span>
-                {holding.costBasisSource ? (
+                <span className="average-cost-value">{formatAverageCost(holding.quantity, holding.averagePrice)}</span>
+                {hasAverageCost(holding.quantity, holding.averagePrice) && holding.costBasisSource ? (
                   <span className="cost-basis-source">{formatCostBasisSource(holding.costBasisSource)}</span>
                 ) : null}
               </dd>
