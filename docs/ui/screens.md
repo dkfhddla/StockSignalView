@@ -30,7 +30,7 @@ PR 12 기준에서 대시보드는 정적 화면 정의가 아니라 Dashboard S
 - 최근 메모
 - 알림 상태
 
-후속 provider 메타데이터 계약을 통과한 데이터가 연결된 경우 provider명, 데이터 출처, 마지막 갱신 시각은 표의 별도 메타데이터 영역 또는 확장 컬럼으로 표시한다. Provider 기반 보유 수량과 평균 매수가에는 `ProviderHoldingSnapshot.captured_at`을 보유 현황 기준 시각으로 가까이 표시하고, 평균 매수가에는 `cost_basis_source` 라벨을 함께 표시한다. 현재가와 지수 값에는 각 스냅샷의 `captured_at`을 `snapshot_role`별 기준 시각으로 표시한다. 이 항목은 현재 MVP `position_table` 필수 컬럼 계약에 포함하지 않는다.
+후속 provider 메타데이터 계약을 통과한 데이터가 연결된 경우 각 보유·가격·지수 계산 입력의 provider명, 데이터 출처, 마지막 갱신 시각은 표의 별도 메타데이터 영역 또는 확장 컬럼으로 표시한다. Provider 기반 보유 수량과 평균 매수가에는 해당 `ProviderHoldingSnapshot`의 provider명, `source`, `captured_at`, `refreshed_at`을 보유 현황 기준 시각으로 가까이 표시하고, 평균 매수가에는 `cost_basis_source` 라벨을 함께 표시한다. 현재가와 지수 값에는 해당 `PriceSnapshot` 또는 `MarketIndexSnapshot`의 provider명, `source`, `captured_at`, `refreshed_at`, `data_status`를 `snapshot_role`별 기준 시각 및 상태로 표시한다. 이 항목은 현재 MVP `position_table` 필수 컬럼 계약에 포함하지 않는다.
 
 ### 모바일 카드 정보
 
@@ -41,7 +41,7 @@ PR 12 기준에서 대시보드는 정적 화면 정의가 아니라 Dashboard S
 - 최근 메모 한 줄
 - 알림 상태
 
-후속 provider 메타데이터 계약을 통과한 데이터가 연결된 모바일 카드는 provider명, 데이터 출처, 보유 현황 기준 시각, 평균 매수가의 원가 근거, `snapshot_role`별 가격·지수 기준 시각, 마지막 갱신 시각을 보조 메타데이터로 표시한다. 현재 MVP의 수동/모의 데이터에는 이 표시를 요구하지 않는다.
+후속 provider 메타데이터 계약을 통과한 데이터가 연결된 모바일 카드는 각 보유·가격·지수 계산 입력의 provider명, 데이터 출처, 보유 현황 기준 시각 또는 `snapshot_role`별 기준 시각, 마지막 갱신 시각, 상태를 보조 메타데이터로 표시한다. 평균 매수가에는 원가 근거도 함께 표시한다. 현재 MVP의 수동/모의 데이터에는 이 표시를 요구하지 않는다.
 
 ### 필터 동작
 
