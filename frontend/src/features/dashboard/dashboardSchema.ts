@@ -9,19 +9,56 @@ export type WidgetType =
   | "alert_status_list";
 export type ImplementedWidgetType = "position_summary" | "position_table" | "position_cards";
 
+export type DashboardProviderSource = "MANUAL" | "BROKER_API" | "MARKET_API" | "IMPORT" | "MOCK";
+export type DashboardDataStatus = "AVAILABLE" | "STALE" | "UNAVAILABLE";
+export type DashboardLookupStatus =
+  | "AVAILABLE"
+  | "PARTIAL"
+  | "STALE"
+  | "UNAVAILABLE"
+  | "UNAUTHORIZED"
+  | "FORBIDDEN"
+  | "PROVIDER_ERROR"
+  | "UNSUPPORTED";
+export type DashboardLookupType = "HOLDINGS" | "PRICE" | "MARKET_INDEX";
+export type DashboardSnapshotRole = "CURRENT" | "DAY_BASELINE" | "HOLDING_PERIOD_BASELINE";
+export type DashboardLookupResult = {
+  lookup_type: DashboardLookupType;
+  target_key: string;
+  target_label?: string;
+  snapshot_role?: DashboardSnapshotRole;
+  lookup_status: DashboardLookupStatus;
+};
+
+export type DashboardProviderMetadata = {
+  attribution: {
+    provider: string;
+    source: DashboardProviderSource;
+    captured_at?: string;
+    refreshed_at: string;
+  };
+  status: {
+    data_status?: DashboardDataStatus;
+    lookup_results?: DashboardLookupResult[];
+  };
+};
+
+type DashboardDataRequirementBase = {
+  key: string;
+  provider_metadata?: DashboardProviderMetadata;
+};
+
 export type DashboardDataRequirement =
-  | {
-      key: string;
+  | (DashboardDataRequirementBase & {
       type: "portfolio_positions";
       filters?: {
         holding_status: "HELD_OR_WATCHLISTED";
       };
-    }
-  | {
-      key: string;
+    })
+  | (DashboardDataRequirementBase & {
       type: Exclude<DashboardDataType, "portfolio_positions">;
       filters?: never;
-    };
+    });
 
 export type DashboardSchema = {
   schema_version: "1.0";
@@ -157,6 +194,20 @@ const positionTableColumns: PositionTableColumn[] = [
   "strength_status",
   "calculation_status",
 ];
+const providerSources: DashboardProviderSource[] = ["MANUAL", "BROKER_API", "MARKET_API", "IMPORT", "MOCK"];
+const dataStatuses: DashboardDataStatus[] = ["AVAILABLE", "STALE", "UNAVAILABLE"];
+const lookupStatuses: DashboardLookupStatus[] = [
+  "AVAILABLE",
+  "PARTIAL",
+  "STALE",
+  "UNAVAILABLE",
+  "UNAUTHORIZED",
+  "FORBIDDEN",
+  "PROVIDER_ERROR",
+  "UNSUPPORTED",
+];
+const lookupTypes: DashboardLookupType[] = ["HOLDINGS", "PRICE", "MARKET_INDEX"];
+const snapshotRoles: DashboardSnapshotRole[] = ["CURRENT", "DAY_BASELINE", "HOLDING_PERIOD_BASELINE"];
 
 export function validateDashboardSchema(schema: unknown): RendererStatus {
   if (!isRecord(schema)) return "INVALID_SCHEMA";
@@ -177,6 +228,12 @@ export function validateDashboardSchema(schema: unknown): RendererStatus {
 
   const dataRequirements = schema.data_requirements as DashboardDataRequirement[];
   const widgets = schema.widgets as DashboardWidget[];
+  if (
+    schema.source === "AI_PLANNER" &&
+    dataRequirements.some((requirement) => requirement.provider_metadata === undefined)
+  ) {
+    return "INVALID_SCHEMA";
+  }
   const dataRequirementKeys = dataRequirements.map((requirement) => requirement.key);
   const widgetIds = widgets.map((widget) => widget.widget_id);
   if (!hasUniqueValues(dataRequirementKeys) || !hasUniqueValues(widgetIds)) {
@@ -201,7 +258,12 @@ function isDataRequirementValid(requirement: unknown): requirement is DashboardD
   if (!isRecord(requirement)) return false;
   if (typeof requirement.key !== "string" || requirement.key.trim() === "") return false;
   if (!isDashboardDataType(requirement.type)) return false;
-  if (!hasOnlyOptionKeys(requirement, ["key", "type", "filters"])) return false;
+  if (!hasOnlyOptionKeys(requirement, ["key", "type", "filters", "provider_metadata"])) return false;
+  if (requirement.provider_metadata === undefined) {
+    if (Object.hasOwn(requirement, "provider_metadata")) return false;
+  } else if (!isProviderMetadataValid(requirement.provider_metadata)) {
+    return false;
+  }
   if (requirement.filters === undefined) {
     return !Object.hasOwn(requirement, "filters");
   }
@@ -211,6 +273,91 @@ function isDataRequirementValid(requirement: unknown): requirement is DashboardD
   return (
     hasOnlyOptionKeys(requirement.filters, ["holding_status"]) &&
     requirement.filters.holding_status === "HELD_OR_WATCHLISTED"
+  );
+}
+
+function isProviderMetadataValid(metadata: unknown): metadata is DashboardProviderMetadata {
+  if (!isRecord(metadata)) return false;
+  if (!hasOnlyOptionKeys(metadata, ["attribution", "status"])) return false;
+  if (!isRecord(metadata.attribution) || !isRecord(metadata.status)) return false;
+  if (!hasOnlyOptionKeys(metadata.attribution, ["provider", "source", "captured_at", "refreshed_at"])) {
+    return false;
+  }
+  if (typeof metadata.attribution.provider !== "string" || metadata.attribution.provider.trim() === "") {
+    return false;
+  }
+  if (!isProviderSource(metadata.attribution.source)) return false;
+  if (!isAwareTimestamp(metadata.attribution.refreshed_at)) return false;
+  if (metadata.attribution.captured_at === undefined) {
+    if (Object.hasOwn(metadata.attribution, "captured_at")) return false;
+  } else if (!isAwareTimestamp(metadata.attribution.captured_at)) {
+    return false;
+  }
+  if (!hasOnlyOptionKeys(metadata.status, ["data_status", "lookup_results"])) return false;
+  if (metadata.status.lookup_results === undefined) {
+    if (Object.hasOwn(metadata.status, "lookup_results")) return false;
+    if (["BROKER_API", "MARKET_API"].includes(metadata.attribution.source)) return false;
+  } else {
+    if (
+      !Array.isArray(metadata.status.lookup_results) ||
+      metadata.status.lookup_results.length === 0 ||
+      !metadata.status.lookup_results.every(isLookupResultValid)
+    ) {
+      return false;
+    }
+    const lookupTargets = metadata.status.lookup_results.map(
+      (result) => `${result.lookup_type}:${result.target_key.trim()}:${result.snapshot_role ?? ""}`,
+    );
+    if (!hasUniqueValues(lookupTargets)) return false;
+    if (
+      metadata.attribution.source === "MARKET_API" &&
+      metadata.status.lookup_results.some((result) => result.lookup_type === "HOLDINGS")
+    ) {
+      return false;
+    }
+    const snapshotLookups = metadata.status.lookup_results.filter(
+      (result) => result.lookup_type === "PRICE" || result.lookup_type === "MARKET_INDEX",
+    );
+    const snapshotLabelGroups = new Map<string, DashboardLookupResult[]>();
+    for (const result of snapshotLookups) {
+      const groupKey = `${result.lookup_type}:${result.snapshot_role}`;
+      snapshotLabelGroups.set(groupKey, [...(snapshotLabelGroups.get(groupKey) ?? []), result]);
+    }
+    if (
+      [...snapshotLabelGroups.values()].some(
+        (results) => results.length > 1 && results.some((result) => result.target_label === undefined),
+      )
+    ) {
+      return false;
+    }
+    if (
+      metadata.status.lookup_results.some(
+        (result) => result.lookup_type === "HOLDINGS" && result.lookup_status === "AVAILABLE",
+      ) &&
+      metadata.attribution.captured_at === undefined
+    ) {
+      return false;
+    }
+    const snapshotLookupCount = snapshotLookups.length;
+    if (metadata.status.data_status !== undefined && snapshotLookupCount !== 1) return false;
+    if (
+      snapshotLookupCount > 1 &&
+      (metadata.status.data_status !== undefined || metadata.attribution.captured_at !== undefined)
+    ) {
+      return false;
+    }
+  }
+  if (metadata.attribution.source === "MANUAL" && metadata.status.lookup_results !== undefined) {
+    return false;
+  }
+  if (metadata.status.data_status === undefined) {
+    return !Object.hasOwn(metadata.status, "data_status");
+  }
+  if (!isDataStatus(metadata.status.data_status)) return false;
+
+  return (
+    !["AVAILABLE", "STALE"].includes(metadata.status.data_status) ||
+    metadata.attribution.captured_at !== undefined
   );
 }
 
@@ -355,6 +502,91 @@ function isDashboardDataType(value: unknown): value is DashboardDataType {
     value === "alert_rules" ||
     value === "alert_events"
   );
+}
+
+function isProviderSource(value: unknown): value is DashboardProviderSource {
+  return typeof value === "string" && providerSources.includes(value as DashboardProviderSource);
+}
+
+function isDataStatus(value: unknown): value is DashboardDataStatus {
+  return typeof value === "string" && dataStatuses.includes(value as DashboardDataStatus);
+}
+
+function isLookupStatus(value: unknown): value is DashboardLookupStatus {
+  return typeof value === "string" && lookupStatuses.includes(value as DashboardLookupStatus);
+}
+
+function isLookupResultValid(value: unknown): value is DashboardLookupResult {
+  if (!isRecord(value)) return false;
+  if (!hasOnlyOptionKeys(value, ["lookup_type", "target_key", "target_label", "snapshot_role", "lookup_status"])) {
+    return false;
+  }
+  if (!isLookupType(value.lookup_type)) return false;
+  if (typeof value.target_key !== "string" || value.target_key.trim() === "") return false;
+  if (value.target_label === undefined) {
+    if (Object.hasOwn(value, "target_label")) return false;
+  } else if (typeof value.target_label !== "string" || value.target_label.trim() === "") {
+    return false;
+  }
+  if (value.lookup_type === "HOLDINGS" && value.target_label === undefined) return false;
+  if (value.lookup_type === "HOLDINGS" && value.target_label?.trim() === value.target_key.trim()) {
+    return false;
+  }
+  const requiresSnapshotRole = value.lookup_type !== "HOLDINGS";
+  if (value.snapshot_role === undefined) {
+    if (Object.hasOwn(value, "snapshot_role")) return false;
+    if (requiresSnapshotRole) return false;
+  } else if (!requiresSnapshotRole || !isSnapshotRole(value.snapshot_role)) {
+    return false;
+  }
+  return isLookupStatus(value.lookup_status);
+}
+
+function isLookupType(value: unknown): value is DashboardLookupType {
+  return typeof value === "string" && lookupTypes.includes(value as DashboardLookupType);
+}
+
+function isSnapshotRole(value: unknown): value is DashboardSnapshotRole {
+  return typeof value === "string" && snapshotRoles.includes(value as DashboardSnapshotRole);
+}
+
+function isAwareTimestamp(value: unknown) {
+  if (typeof value !== "string") return false;
+  const match = value.match(
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,6})?(?:Z|[+-](\d{2}):(\d{2}))$/,
+  );
+  if (!match) return false;
+
+  const [, yearText, monthText, dayText, hourText, minuteText, secondText, offsetHourText, offsetMinuteText] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  const second = Number(secondText);
+  const offsetHour = offsetHourText === undefined ? 0 : Number(offsetHourText);
+  const offsetMinute = offsetMinuteText === undefined ? 0 : Number(offsetMinuteText);
+
+  return (
+    year >= 1 &&
+    month >= 1 &&
+    month <= 12 &&
+    day >= 1 &&
+    day <= daysInMonth(year, month) &&
+    hour <= 23 &&
+    minute <= 59 &&
+    second <= 59 &&
+    offsetHour <= 23 &&
+    offsetMinute <= 59
+  );
+}
+
+function daysInMonth(year: number, month: number) {
+  if (month === 2) {
+    const isLeapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+    return isLeapYear ? 29 : 28;
+  }
+  return [4, 6, 9, 11].includes(month) ? 30 : 31;
 }
 
 function isWidgetType(value: unknown): value is WidgetType {

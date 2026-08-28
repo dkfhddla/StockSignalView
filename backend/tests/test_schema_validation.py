@@ -7,6 +7,28 @@ from app.services.dashboards import build_default_dashboard
 from app.services.schema_validation import DashboardSchemaValidationError, validate_dashboard_schema
 
 
+def _provider_metadata() -> dict:
+    return {
+        "attribution": {
+            "provider": "Toss Securities",
+            "source": "BROKER_API",
+            "captured_at": "2026-08-24T09:00:00+09:00",
+            "refreshed_at": "2026-08-24T09:01:00+09:00",
+        },
+        "status": {
+            "data_status": "AVAILABLE",
+            "lookup_results": [
+                {
+                    "lookup_type": "HOLDINGS",
+                    "target_key": "account-primary",
+                    "target_label": "주 계좌",
+                    "lookup_status": "AVAILABLE",
+                }
+            ],
+        },
+    }
+
+
 def _schema(payload: dict) -> DashboardSchema:
     return DashboardSchema.model_validate(payload)
 
@@ -33,6 +55,30 @@ def test_default_dashboard_is_fresh_and_valid() -> None:
     assert second["dashboard_id"] == "portfolio-overview"
     assert second["widgets"][0]["title"] == "포트폴리오 요약"
     assert validated is not None
+
+
+def test_validator_accepts_attributed_ai_dashboard() -> None:
+    payload = build_default_dashboard()
+    payload["source"] = "AI_PLANNER"
+    for requirement in payload["data_requirements"]:
+        requirement["provider_metadata"] = _provider_metadata()
+
+    schema = _schema(payload)
+
+    assert validate_dashboard_schema(schema) is schema
+
+
+def test_validator_rejects_unattributed_ai_dashboard() -> None:
+    payload = build_default_dashboard()
+    payload["source"] = "AI_PLANNER"
+    payload["description"] = "출처 없는 provider 요약"
+    schema = _schema(payload)
+
+    with pytest.raises(
+        DashboardSchemaValidationError,
+        match="AI_PLANNER data requirements require provider metadata: positions",
+    ):
+        validate_dashboard_schema(schema)
 
 
 @pytest.mark.parametrize(

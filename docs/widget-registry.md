@@ -145,22 +145,24 @@ Widget Registry는 Dashboard Schema v1에서 사용할 수 있는 위젯 타입�
 
 ## 데이터 상태 표시
 
-Dashboard Schema와 양쪽 validator에 후속 provider 메타데이터 계약이 도입된 뒤 해당 데이터가 연결된 위젯은 스냅샷의 `data_status`와 `ProviderLookupResult.lookup_status`를 구분해 표시해야 한다. 현재 MVP의 수동/모의 데이터에는 provider 메타데이터 표시를 요구하지 않고 기존 위젯 상태 계약만 적용한다.
+`provider_metadata`가 있는 데이터 요구사항에 연결된 위젯은 provider명, 데이터 출처, 값의 기준 시각, 마지막 갱신 시각과 상태를 별도 메타데이터 영역에 표시한다. 단일 데이터 위젯은 `data_key`, 다중 데이터 위젯은 각 `data_keys[*]`로 해당 요구사항을 찾는다.
 
-앞 절의 공통 상태는 위젯 렌더링 상태이고, `lookup_status`는 provider 조회 상태다. 두 필드에 같은 `PARTIAL` 또는 `UNAVAILABLE` 이름이 있어도 서로 대체해서는 안 된다.
+Provider 메타데이터가 없는 기존 로컬 `PRESET`과 `USER_SAVED`의 수동·모의 데이터에는 메타데이터 표시를 필수로 요구하지 않고 기존 위젯 상태 계약만 적용한다.
 
-현재 MVP 렌더러와 스키마 검증은 provider 메타데이터 컬럼을 아직 허용하지 않는다. Provider 확장 구현 시에는 위젯 옵션 또는 별도 메타데이터 표시 영역으로 다음 상태를 노출해야 한다.
+앞 절의 공통 상태는 위젯 렌더링 상태이고, `lookup_results[*].lookup_status`는 provider 조회 상태다. 두 위치에 같은 `PARTIAL` 또는 `UNAVAILABLE` 이름이 있어도 서로 대체해서는 안 된다.
+
+메타데이터 영역은 위젯 옵션이나 투자 데이터 컬럼으로 합치지 않는다. 스냅샷의 `data_status`와 각 `lookup_results[*].lookup_status`를 각각 표시한다.
 
 허용 상태 값과 의미는 `docs/specs/stock-signal-view-data-model.md`의 `PriceSnapshot.data_status`, `MarketIndexSnapshot.data_status`, `ProviderLookupResult.lookup_status`가 소유한다. Widget Registry는 위젯이 owner 상태를 노출해야 하는 조건을 소유하며 상태 자체를 재정의하지 않는다. 표시 라벨과 배지 매핑은 `docs/ui/components.md`를 따른다.
 
 표시 기준:
 
-- `data_status`와 `lookup_status`를 하나의 상태로 접어 표시하지 않는다.
+- `data_status`와 `lookup_results[*].lookup_status`를 하나의 상태로 접어 표시하지 않는다.
 - `STALE`, `PARTIAL`, `UNAVAILABLE`, `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED`는 정상 계산값과 같은 시각 위계로 표시하지 않는다.
 - 일부 행이나 지표만 사용할 수 없고 나머지를 안전하게 표시할 수 있으면 위젯 렌더링 상태를 `PARTIAL`로, 핵심 데이터를 모두 사용할 수 없으면 `UNAVAILABLE`로 표시한다.
-- `lookup_status`는 보유 조회에서 같은 `ProviderLookupResult`의 `lookup_type`과 `target_key`, 가격·지수 조회에서 여기에 `snapshot_role`까지 포함한 조합으로 해당 행이나 계산 입력에 연결한다.
+- 각 `lookup_results[*].lookup_status`는 같은 `provider_metadata.attribution.provider` 안에서 보유 조회는 `lookup_type`과 `target_key`, 가격·지수 조회는 여기에 `snapshot_role`까지 포함한 조합으로 해당 행이나 계산 입력에 연결한다. 메타데이터 영역에는 내부 `target_key` 대신 안전한 `target_label` 또는 조회 유형 라벨과 필요한 역할 라벨을 표시하며, 같은 조회 유형·역할의 가격·지수 결과가 여럿이면 각 결과의 `target_label`을 표시한다.
 - 가격 또는 지수 값의 기준 시각과 시스템의 마지막 갱신 시각을 서로 대체해서 표시하지 않는다.
-- 가격·지수 스냅샷의 `captured_at`과 `data_status`는 해당 `snapshot_role`의 UI 라벨과 같은 묶음으로 표시한다.
+- 가격·지수 스냅샷 전용 데이터 요구사항이 추가되면 `captured_at`과 `data_status`를 해당 `snapshot_role`의 UI 라벨과 같은 묶음으로 표시한다.
 - `ProviderHoldingSnapshot.captured_at`은 가격·지수 기준 시각과 구분하고 provider 기반 보유 수량과 평균 매수가 가까이에 표시한다.
 - `data_status`는 `PriceSnapshot`과 `MarketIndexSnapshot`에만 적용한다. 보유 현황은 해당 `ProviderLookupResult.lookup_status`로 조회 가능 여부를 판단한다.
 - Provider 기반 평균 매수가는 `cost_basis_source`를 함께 표시하고 라벨은 `docs/ui/components.md`를 따른다.

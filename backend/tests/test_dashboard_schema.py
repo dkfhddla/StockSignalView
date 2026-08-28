@@ -6,6 +6,27 @@ from pydantic import ValidationError
 from app.schemas.dashboard import DashboardErrorResponse, DashboardSchema
 
 
+def provider_metadata() -> dict:
+    return {
+        "attribution": {
+            "provider": "Toss Securities",
+            "source": "BROKER_API",
+            "captured_at": "2026-08-24T09:00:00+09:00",
+            "refreshed_at": "2026-08-24T09:01:00+09:00",
+        },
+        "status": {
+            "lookup_results": [
+                {
+                    "lookup_type": "HOLDINGS",
+                    "target_key": "account-primary",
+                    "target_label": "주 계좌",
+                    "lookup_status": "UNAUTHORIZED",
+                }
+            ],
+        },
+    }
+
+
 @pytest.fixture
 def valid_dashboard_payload() -> dict:
     return {
@@ -80,6 +101,276 @@ def test_dashboard_schema_accepts_frontend_preset_shape(valid_dashboard_payload:
     schema = DashboardSchema.model_validate(valid_dashboard_payload)
 
     assert schema.model_dump(mode="json", exclude_none=True) == valid_dashboard_payload
+
+
+def test_dashboard_schema_accepts_provider_metadata(valid_dashboard_payload: dict) -> None:
+    payload = deepcopy(valid_dashboard_payload)
+    payload["data_requirements"][0]["provider_metadata"] = provider_metadata()
+
+    schema = DashboardSchema.model_validate(payload)
+
+    assert schema.model_dump(mode="json", exclude_none=True) == payload
+
+
+def test_dashboard_schema_rejects_scalar_snapshot_metadata_for_distinct_roles(
+    valid_dashboard_payload: dict,
+) -> None:
+    payload = deepcopy(valid_dashboard_payload)
+    metadata = provider_metadata()
+    metadata["status"]["lookup_results"].extend(
+        [
+            {
+                "lookup_type": "PRICE",
+                "target_key": "stock-005930",
+                "target_label": "삼성전자",
+                "snapshot_role": "CURRENT",
+                "lookup_status": "AVAILABLE",
+            },
+            {
+                "lookup_type": "PRICE",
+                "target_key": "stock-005930",
+                "target_label": "삼성전자",
+                "snapshot_role": "DAY_BASELINE",
+                "lookup_status": "UNAVAILABLE",
+            },
+        ]
+    )
+    payload["data_requirements"][0]["provider_metadata"] = metadata
+
+    with pytest.raises(ValidationError) as exc_info:
+        DashboardSchema.model_validate(payload)
+
+    assert "cannot represent multiple snapshot lookups" in str(exc_info.value)
+
+
+def test_dashboard_schema_requires_captured_at_for_available_snapshot(
+    valid_dashboard_payload: dict,
+) -> None:
+    payload = deepcopy(valid_dashboard_payload)
+    metadata = provider_metadata()
+    metadata["attribution"].pop("captured_at")
+    metadata["status"]["data_status"] = "AVAILABLE"
+    metadata["status"]["lookup_results"][0] = {
+        "lookup_type": "PRICE",
+        "target_key": "stock-005930",
+        "snapshot_role": "CURRENT",
+        "lookup_status": "AVAILABLE",
+    }
+    payload["data_requirements"][0]["provider_metadata"] = metadata
+
+    with pytest.raises(ValidationError) as exc_info:
+        DashboardSchema.model_validate(payload)
+
+    assert "AVAILABLE and STALE data require captured_at" in str(exc_info.value)
+
+
+@pytest.mark.parametrize(
+    ("mutation", "expected_error"),
+    [
+        (lambda metadata: metadata.pop("attribution"), "attribution"),
+        (lambda metadata: metadata["attribution"].update(provider=" "), "string_too_short"),
+        (lambda metadata: metadata["attribution"].update(source="REMOTE"), "source"),
+        (
+            lambda metadata: metadata["attribution"].update(
+                refreshed_at="2026-08-24T09:01:00"
+            ),
+            "timezone-aware ISO 8601 string",
+        ),
+        (lambda metadata: metadata["attribution"].update(refreshed_at=0), "ISO 8601 string"),
+        (
+            lambda metadata: metadata["attribution"].update(
+                refreshed_at="2026-02-30T09:01:00Z"
+            ),
+            "valid calendar date",
+        ),
+        (lambda metadata: metadata["status"].update(data_status="FRESH"), "data_status"),
+        (
+            lambda metadata: metadata["status"]["lookup_results"][0].update(
+                lookup_status="ERROR"
+            ),
+            "lookup_status",
+        ),
+        (
+            lambda metadata: metadata["status"]["lookup_results"][0].update(
+                lookup_type="ACCOUNT"
+            ),
+            "lookup_type",
+        ),
+        (
+            lambda metadata: metadata["status"]["lookup_results"][0].update(
+                target_key=" "
+            ),
+            "string_too_short",
+        ),
+        (
+            lambda metadata: metadata["status"]["lookup_results"][0].update(
+                target_label=None
+            ),
+            "target_label must be omitted",
+        ),
+        (
+            lambda metadata: metadata["status"]["lookup_results"][0].pop(
+                "target_label"
+            ),
+            "HOLDINGS lookup results require target_label",
+        ),
+        (
+            lambda metadata: metadata["status"]["lookup_results"][0].update(
+                target_label=metadata["status"]["lookup_results"][0]["target_key"]
+            ),
+            "HOLDINGS target_label must not expose target_key",
+        ),
+        (
+            lambda metadata: metadata["status"]["lookup_results"][0].update(
+                lookup_type="PRICE"
+            ),
+            "require snapshot_role",
+        ),
+        (
+            lambda metadata: metadata["status"]["lookup_results"][0].update(
+                snapshot_role="CURRENT"
+            ),
+            "HOLDINGS lookup results cannot define snapshot_role",
+        ),
+        (
+            lambda metadata: metadata["status"]["lookup_results"][0].update(
+                lookup_type="PRICE", snapshot_role="BASELINE"
+            ),
+            "snapshot_role",
+        ),
+        (
+            lambda metadata: metadata["status"]["lookup_results"][0].update(
+                lookup_type="PRICE", snapshot_role=None
+            ),
+            "snapshot_role must be omitted",
+        ),
+        (
+            lambda metadata: metadata["status"].update(lookup_results=[]),
+            "at least one result",
+        ),
+        (
+            lambda metadata: metadata["status"]["lookup_results"].append(
+                deepcopy(metadata["status"]["lookup_results"][0])
+            ),
+            "targets must be unique",
+        ),
+        (
+            lambda metadata: metadata["status"].pop("lookup_results"),
+            "require lookup_results",
+        ),
+        (
+            lambda metadata: metadata["status"].update(lookup_status="AVAILABLE"),
+            "extra_forbidden",
+        ),
+        (
+            lambda metadata: metadata["status"].update(data_status="UNAVAILABLE"),
+            "data_status requires exactly one PRICE or MARKET_INDEX lookup result",
+        ),
+        (lambda metadata: metadata["attribution"].pop("captured_at"), "require captured_at"),
+        (
+            lambda metadata: metadata["attribution"].update(source="MANUAL"),
+            "MANUAL source cannot define lookup_results",
+        ),
+        (
+            lambda metadata: metadata["attribution"].update(source="MARKET_API"),
+            "MARKET_API source cannot define HOLDINGS lookup results",
+        ),
+        (lambda metadata: metadata["status"].update(error="token expired"), "extra_forbidden"),
+    ],
+)
+def test_dashboard_schema_rejects_invalid_provider_metadata(
+    valid_dashboard_payload: dict,
+    mutation,
+    expected_error: str,
+) -> None:
+    payload = deepcopy(valid_dashboard_payload)
+    metadata = provider_metadata()
+    mutation(metadata)
+    payload["data_requirements"][0]["provider_metadata"] = metadata
+
+    with pytest.raises(ValidationError) as exc_info:
+        DashboardSchema.model_validate(payload)
+
+    assert expected_error in str(exc_info.value)
+
+
+def test_dashboard_schema_rejects_ambiguous_snapshot_lookup_labels(
+    valid_dashboard_payload: dict,
+) -> None:
+    payload = deepcopy(valid_dashboard_payload)
+    metadata = provider_metadata()
+    metadata["attribution"].pop("captured_at")
+    metadata["status"]["lookup_results"].extend(
+        [
+            {
+                "lookup_type": "PRICE",
+                "target_key": "stock-005930",
+                "snapshot_role": "CURRENT",
+                "lookup_status": "AVAILABLE",
+            },
+            {
+                "lookup_type": "PRICE",
+                "target_key": "stock-035720",
+                "snapshot_role": "CURRENT",
+                "lookup_status": "UNAVAILABLE",
+            },
+        ]
+    )
+    payload["data_requirements"][0]["provider_metadata"] = metadata
+
+    with pytest.raises(ValidationError) as exc_info:
+        DashboardSchema.model_validate(payload)
+
+    assert "same-role PRICE and MARKET_INDEX lookup results require target_label" in str(
+        exc_info.value
+    )
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("provider_metadata", None),
+        ("captured_at", None),
+        ("data_status", None),
+        ("lookup_results", None),
+    ],
+)
+def test_dashboard_schema_rejects_null_optional_provider_metadata_fields(
+    valid_dashboard_payload: dict,
+    field: str,
+    value,
+) -> None:
+    payload = deepcopy(valid_dashboard_payload)
+    metadata = provider_metadata()
+    if field == "provider_metadata":
+        payload["data_requirements"][0][field] = value
+    elif field == "captured_at":
+        metadata["attribution"][field] = value
+        payload["data_requirements"][0]["provider_metadata"] = metadata
+    else:
+        metadata["status"][field] = value
+        payload["data_requirements"][0]["provider_metadata"] = metadata
+
+    with pytest.raises(ValidationError):
+        DashboardSchema.model_validate(payload)
+
+
+def test_dashboard_schema_accepts_local_attribution_without_lookup_results(
+    valid_dashboard_payload: dict,
+) -> None:
+    payload = deepcopy(valid_dashboard_payload)
+    payload["data_requirements"][0]["provider_metadata"] = {
+        "attribution": {
+            "provider": "StockSignalView",
+            "source": "MANUAL",
+            "refreshed_at": "2026-08-24T09:01:00+09:00",
+        },
+        "status": {},
+    }
+
+    schema = DashboardSchema.model_validate(payload)
+
+    assert schema.model_dump(mode="json", exclude_none=True) == payload
 
 
 @pytest.mark.parametrize(

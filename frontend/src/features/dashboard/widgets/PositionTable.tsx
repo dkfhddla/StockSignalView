@@ -1,6 +1,13 @@
 import { Holding } from "../mockPortfolio";
 import { PositionTableColumn } from "../dashboardSchema";
-import { formatCurrency, formatPercent, getTone } from "./formatters";
+import {
+  formatAverageCost,
+  formatCostBasisSource,
+  formatCurrency,
+  formatPercent,
+  getTone,
+  hasAverageCost,
+} from "./formatters";
 import { StatusBadge } from "./StatusBadge";
 
 type PositionTableOptions = {
@@ -44,7 +51,20 @@ const columns: ColumnDefinition[] = [
     key: "average_cost",
     header: "평균가",
     numeric: true,
-    render: (holding) => formatCurrency(holding.averagePrice),
+    render: (holding) => {
+      const averageCostAvailable = hasAverageCost(holding.quantity, holding.averagePrice);
+
+      return (
+        <span className="average-cost">
+          <span className="average-cost-value">{formatAverageCost(holding.quantity, holding.averagePrice)}</span>
+          {averageCostAvailable ? (
+            <span className="cost-basis-source">
+              {formatCostBasisSource(holding.costBasisSource ?? "UNKNOWN")}
+            </span>
+          ) : null}
+        </span>
+      );
+    },
     sortValue: (holding) => holding.averagePrice,
   },
   {

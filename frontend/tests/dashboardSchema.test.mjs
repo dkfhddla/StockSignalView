@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test, { after } from "node:test";
 
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
 
 const vite = await createServer({
@@ -15,6 +17,10 @@ const { validateDashboardSchema } = await vite.ssrLoadModule(
 const { DashboardSchemaValidationError, fetchDefaultDashboard } = await vite.ssrLoadModule(
   "/src/lib/dashboardApi.ts",
 );
+const { DashboardRenderer } = await vite.ssrLoadModule(
+  "/src/features/dashboard/DashboardRenderer.tsx",
+);
+const { holdings } = await vite.ssrLoadModule("/src/features/dashboard/mockPortfolio.ts");
 
 after(async () => {
   await vite.close();
@@ -57,10 +63,700 @@ function validSchema() {
   return withFilters({ holding_status: "HELD_OR_WATCHLISTED" });
 }
 
+function providerMetadata() {
+  return {
+    attribution: {
+      provider: "Toss Securities",
+      source: "BROKER_API",
+      captured_at: "2026-08-24T09:00:00+09:00",
+      refreshed_at: "2026-08-24T09:01:00+09:00",
+    },
+    status: {
+      lookup_results: [
+        {
+          lookup_type: "HOLDINGS",
+          target_key: "account-primary",
+          target_label: "주 계좌",
+          lookup_status: "UNAUTHORIZED",
+        },
+      ],
+    },
+  };
+}
+
+function withProviderMetadata(metadata = providerMetadata()) {
+  const schema = validSchema();
+  schema.data_requirements[0].provider_metadata = metadata;
+  return schema;
+}
+
+function renderDashboard(schema, positions = []) {
+  return renderToStaticMarkup(
+    createElement(DashboardRenderer, {
+      activeFilter: "전체",
+      onFilterChange: () => {},
+      positions,
+      schema,
+      schemaSourceMessage: "테스트 스키마",
+      summaryPositions: positions,
+    }),
+  );
+}
+
 test("accepts the supported portfolio position filter", () => {
   const schema = validSchema();
 
   assert.equal(validateDashboardSchema(schema), "READY");
+});
+
+test("accepts provider attribution and independent statuses", () => {
+  const schema = withProviderMetadata();
+
+  assert.equal(validateDashboardSchema(schema), "READY");
+});
+
+test("rejects scalar snapshot metadata for distinct price lookup roles", () => {
+  const metadata = providerMetadata();
+  metadata.status.lookup_results.push(
+    {
+      lookup_type: "PRICE",
+      target_key: "stock-005930",
+      target_label: "삼성전자",
+      snapshot_role: "CURRENT",
+      lookup_status: "AVAILABLE",
+    },
+    {
+      lookup_type: "PRICE",
+      target_key: "stock-005930",
+      target_label: "삼성전자",
+      snapshot_role: "DAY_BASELINE",
+      lookup_status: "UNAVAILABLE",
+    },
+  );
+
+  assert.equal(validateDashboardSchema(withProviderMetadata(metadata)), "INVALID_SCHEMA");
+});
+
+test("rejects malformed provider metadata", () => {
+  const missingAttribution = providerMetadata();
+  delete missingAttribution.attribution;
+
+  const blankProvider = providerMetadata();
+  blankProvider.attribution.provider = " ";
+
+  const invalidSource = providerMetadata();
+  invalidSource.attribution.source = "REMOTE";
+
+  const timezoneMissing = providerMetadata();
+  timezoneMissing.attribution.refreshed_at = "2026-08-24T09:01:00";
+
+  const numericTimestamp = providerMetadata();
+  numericTimestamp.attribution.refreshed_at = 0;
+
+  const invalidCalendarDate = providerMetadata();
+  invalidCalendarDate.attribution.refreshed_at = "2026-02-30T09:01:00Z";
+
+  const invalidDataStatus = providerMetadata();
+  invalidDataStatus.status.data_status = "FRESH";
+
+  const invalidLookupStatus = providerMetadata();
+  invalidLookupStatus.status.lookup_results[0].lookup_status = "ERROR";
+
+  const invalidLookupType = providerMetadata();
+  invalidLookupType.status.lookup_results[0].lookup_type = "ACCOUNT";
+
+  const blankTargetKey = providerMetadata();
+  blankTargetKey.status.lookup_results[0].target_key = " ";
+
+  const nullTargetLabel = providerMetadata();
+  nullTargetLabel.status.lookup_results[0].target_label = null;
+
+  const missingHoldingsTargetLabel = providerMetadata();
+  delete missingHoldingsTargetLabel.status.lookup_results[0].target_label;
+
+  const exposedHoldingsTargetKey = providerMetadata();
+  exposedHoldingsTargetKey.status.lookup_results[0].target_label =
+    exposedHoldingsTargetKey.status.lookup_results[0].target_key;
+
+  const availableHoldingsWithoutCapturedAt = providerMetadata();
+  delete availableHoldingsWithoutCapturedAt.attribution.captured_at;
+  delete availableHoldingsWithoutCapturedAt.status.data_status;
+  availableHoldingsWithoutCapturedAt.status.lookup_results[0].lookup_status = "AVAILABLE";
+
+  const priceLookupWithoutRole = providerMetadata();
+  priceLookupWithoutRole.status.lookup_results[0].lookup_type = "PRICE";
+
+  const holdingsLookupWithRole = providerMetadata();
+  holdingsLookupWithRole.status.lookup_results[0].snapshot_role = "CURRENT";
+
+  const invalidSnapshotRole = providerMetadata();
+  invalidSnapshotRole.status.lookup_results[0].lookup_type = "PRICE";
+  invalidSnapshotRole.status.lookup_results[0].snapshot_role = "BASELINE";
+
+  const nullSnapshotRole = providerMetadata();
+  nullSnapshotRole.status.lookup_results[0].lookup_type = "PRICE";
+  nullSnapshotRole.status.lookup_results[0].snapshot_role = null;
+
+  const emptyLookupResults = providerMetadata();
+  emptyLookupResults.status.lookup_results = [];
+
+  const duplicateLookupTarget = providerMetadata();
+  duplicateLookupTarget.status.lookup_results.push({
+    ...duplicateLookupTarget.status.lookup_results[0],
+  });
+
+  const missingProviderLookupResults = providerMetadata();
+  delete missingProviderLookupResults.status.lookup_results;
+
+  const legacyScalarLookupStatus = providerMetadata();
+  delete legacyScalarLookupStatus.status.lookup_results;
+  legacyScalarLookupStatus.status.lookup_status = "AVAILABLE";
+
+  const missingCapturedAt = providerMetadata();
+  delete missingCapturedAt.attribution.captured_at;
+  missingCapturedAt.status.data_status = "AVAILABLE";
+  missingCapturedAt.status.lookup_results[0] = {
+    lookup_type: "PRICE",
+    target_key: "005930",
+    snapshot_role: "CURRENT",
+    lookup_status: "AVAILABLE",
+  };
+
+  const manualProviderLookupStatus = providerMetadata();
+  manualProviderLookupStatus.attribution.source = "MANUAL";
+
+  const dataStatusWithoutSnapshotLookup = providerMetadata();
+  dataStatusWithoutSnapshotLookup.status.data_status = "UNAVAILABLE";
+
+  const marketApiHoldingsLookup = providerMetadata();
+  marketApiHoldingsLookup.attribution.source = "MARKET_API";
+
+  const ambiguousSnapshotLookupLabels = providerMetadata();
+  delete ambiguousSnapshotLookupLabels.attribution.captured_at;
+  ambiguousSnapshotLookupLabels.status.lookup_results.push(
+    {
+      lookup_type: "PRICE",
+      target_key: "005930",
+      snapshot_role: "CURRENT",
+      lookup_status: "AVAILABLE",
+    },
+    {
+      lookup_type: "PRICE",
+      target_key: "035720",
+      snapshot_role: "CURRENT",
+      lookup_status: "UNAVAILABLE",
+    },
+  );
+
+  const unsupportedStatusField = providerMetadata();
+  unsupportedStatusField.status.unexpected = "unsupported";
+
+  const explicitNull = providerMetadata();
+  explicitNull.status.data_status = null;
+
+  for (const metadata of [
+    missingAttribution,
+    blankProvider,
+    invalidSource,
+    timezoneMissing,
+    numericTimestamp,
+    invalidCalendarDate,
+    invalidDataStatus,
+    invalidLookupStatus,
+    invalidLookupType,
+    blankTargetKey,
+    nullTargetLabel,
+    missingHoldingsTargetLabel,
+    exposedHoldingsTargetKey,
+    availableHoldingsWithoutCapturedAt,
+    priceLookupWithoutRole,
+    holdingsLookupWithRole,
+    invalidSnapshotRole,
+    nullSnapshotRole,
+    emptyLookupResults,
+    duplicateLookupTarget,
+    missingProviderLookupResults,
+    legacyScalarLookupStatus,
+    missingCapturedAt,
+    manualProviderLookupStatus,
+    dataStatusWithoutSnapshotLookup,
+    marketApiHoldingsLookup,
+    ambiguousSnapshotLookupLabels,
+    unsupportedStatusField,
+    explicitNull,
+  ]) {
+    assert.equal(validateDashboardSchema(withProviderMetadata(metadata)), "INVALID_SCHEMA");
+  }
+});
+
+test("accepts local attribution without provider lookup results", () => {
+  const schema = withProviderMetadata({
+    attribution: {
+      provider: "StockSignalView",
+      source: "MANUAL",
+      refreshed_at: "2026-08-24T09:01:00+09:00",
+    },
+    status: {},
+  });
+
+  assert.equal(validateDashboardSchema(schema), "READY");
+  assert.match(renderDashboard(schema), /수동 입력/);
+});
+
+test("requires attribution for AI planner dashboards", () => {
+  const unattributed = validSchema();
+  unattributed.source = "AI_PLANNER";
+  unattributed.description = "출처 없는 provider 요약";
+
+  const attributed = withProviderMetadata();
+  attributed.source = "AI_PLANNER";
+
+  assert.equal(validateDashboardSchema(unattributed), "INVALID_SCHEMA");
+  assert.equal(validateDashboardSchema(attributed), "READY");
+});
+
+test("renders provider attribution and holdings lookup status badges", () => {
+  const markup = renderDashboard(withProviderMetadata());
+
+  assert.match(markup, /Toss Securities/);
+  assert.match(markup, /증권사 API/);
+  assert.match(markup, /보유 현황 기준/);
+  assert.match(markup, /마지막 갱신/);
+  assert.match(markup, /보유 조회/);
+  assert.match(markup, /주 계좌/);
+  assert.match(markup, /인증 실패/);
+  assert.doesNotMatch(markup, /account-primary/);
+});
+
+test("renders every supported data and lookup status", () => {
+  const dataStatusLabels = {
+    AVAILABLE: "값 최신",
+    STALE: "값 갱신 지연",
+    UNAVAILABLE: "데이터 부족",
+  };
+  const lookupStatusLabels = {
+    AVAILABLE: "조회 정상",
+    PARTIAL: "일부 데이터",
+    STALE: "조회 지연",
+    UNAVAILABLE: "조회 결과 없음",
+    UNAUTHORIZED: "인증 실패",
+    FORBIDDEN: "권한 없음",
+    PROVIDER_ERROR: "provider 오류",
+    UNSUPPORTED: "provider 미지원",
+  };
+
+  for (const [status, label] of Object.entries(dataStatusLabels)) {
+    const metadata = providerMetadata();
+    metadata.attribution.source = "MARKET_API";
+    metadata.status.lookup_results[0] = {
+      lookup_type: "PRICE",
+      target_key: "005930",
+      snapshot_role: "CURRENT",
+      lookup_status: "AVAILABLE",
+    };
+    metadata.status.data_status = status;
+    assert.match(renderDashboard(withProviderMetadata(metadata)), new RegExp(label));
+  }
+
+  for (const [status, label] of Object.entries(lookupStatusLabels)) {
+    const metadata = providerMetadata();
+    metadata.status.lookup_results[0].lookup_status = status;
+    assert.match(renderDashboard(withProviderMetadata(metadata)), new RegExp(label));
+  }
+});
+
+test("renders each lookup result with a safe target label", () => {
+  const metadata = providerMetadata();
+  delete metadata.attribution.captured_at;
+  delete metadata.status.data_status;
+  metadata.status.lookup_results.push(
+    {
+      lookup_type: "PRICE",
+      target_key: "sensitive-provider-symbol",
+      target_label: "삼성전자",
+      snapshot_role: "CURRENT",
+      lookup_status: "STALE",
+    },
+    {
+      lookup_type: "MARKET_INDEX",
+      target_key: "market-kospi",
+      target_label: "KOSPI",
+      snapshot_role: "DAY_BASELINE",
+      lookup_status: "PROVIDER_ERROR",
+    },
+  );
+  const markup = renderDashboard(withProviderMetadata(metadata));
+
+  assert.match(markup, /가격 조회/);
+  assert.match(markup, /삼성전자/);
+  assert.match(markup, /현재값/);
+  assert.match(markup, /시장 지수 조회/);
+  assert.match(markup, /KOSPI/);
+  assert.match(markup, /당일 기준/);
+  assert.doesNotMatch(markup, /sensitive-provider-symbol/);
+  assert.doesNotMatch(markup, /market-kospi/);
+});
+
+test("renders unavailable state instead of positions after a holdings lookup failure", () => {
+  const markup = renderDashboard(withProviderMetadata(), holdings);
+
+  assert.match(markup, /보유 데이터를 표시할 수 없습니다/);
+  assert.doesNotMatch(markup, /삼성전자/);
+});
+
+test("marks a position unavailable when its price lookup fails", () => {
+  const metadata = {
+    attribution: {
+      provider: "Toss Securities",
+      source: "MARKET_API",
+      refreshed_at: "2026-08-24T09:01:00+09:00",
+    },
+    status: {
+      data_status: "UNAVAILABLE",
+      lookup_results: [
+        {
+          lookup_type: "PRICE",
+          target_key: "005930",
+          snapshot_role: "CURRENT",
+          lookup_status: "AVAILABLE",
+        },
+      ],
+    },
+  };
+  const schema = withProviderMetadata(metadata);
+  schema.widgets = [
+    {
+      widget_id: "positions-table",
+      type: "position_table",
+      title: "보유 종목",
+      data_key: "positions",
+      layout: { desktop_span: 12, mobile_order: 1 },
+      options: {
+        columns: ["stock_name", "market_value", "relative_return_rate"],
+        sort: { field: "relative_return_rate", direction: "desc" },
+      },
+    },
+  ];
+  const markup = renderDashboard(schema, [holdings[0]]);
+
+  assert.match(markup, /삼성전자/);
+  assert.match(markup, /계산 불가/);
+  assert.doesNotMatch(markup, /937,200원/);
+});
+
+test("keeps current values when only a price baseline is unavailable", () => {
+  const metadata = {
+    attribution: {
+      provider: "Toss Securities",
+      source: "MARKET_API",
+      refreshed_at: "2026-08-24T09:01:00+09:00",
+    },
+    status: {
+      lookup_results: [
+        {
+          lookup_type: "PRICE",
+          target_key: "005930",
+          snapshot_role: "HOLDING_PERIOD_BASELINE",
+          lookup_status: "UNAVAILABLE",
+        },
+      ],
+    },
+  };
+  const schema = withProviderMetadata(metadata);
+  schema.widgets = [
+    {
+      widget_id: "positions-table",
+      type: "position_table",
+      title: "보유 종목",
+      data_key: "positions",
+      layout: { desktop_span: 12, mobile_order: 1 },
+      options: {
+        columns: ["stock_name", "market_value", "stock_return_rate", "relative_return_rate"],
+        sort: { field: "relative_return_rate", direction: "desc" },
+      },
+    },
+  ];
+  const markup = renderDashboard(schema, [holdings[0]]);
+
+  assert.match(markup, /937,200원/);
+  assert.match(markup, /데이터 부족/);
+});
+
+test("keeps holding-period returns when only a day baseline is unavailable", () => {
+  const metadata = {
+    attribution: {
+      provider: "Toss Securities",
+      source: "MARKET_API",
+      refreshed_at: "2026-08-24T09:01:00+09:00",
+    },
+    status: {
+      lookup_results: [
+        {
+          lookup_type: "PRICE",
+          target_key: "005930",
+          snapshot_role: "DAY_BASELINE",
+          lookup_status: "UNAVAILABLE",
+        },
+      ],
+    },
+  };
+  const schema = withProviderMetadata(metadata);
+  schema.widgets = [
+    {
+      widget_id: "positions-table",
+      type: "position_table",
+      title: "보유 종목",
+      data_key: "positions",
+      layout: { desktop_span: 12, mobile_order: 1 },
+      options: {
+        columns: ["stock_name", "stock_return_rate", "relative_return_rate"],
+        sort: { field: "relative_return_rate", direction: "desc" },
+      },
+    },
+  ];
+  const markup = renderDashboard(schema, [holdings[0]]);
+
+  assert.match(markup, /6\.26%/);
+  assert.match(markup, /4\.42%/);
+});
+
+test("marks market metrics unavailable without hiding price values", () => {
+  const metadata = {
+    attribution: {
+      provider: "Toss Securities",
+      source: "MARKET_API",
+      refreshed_at: "2026-08-24T09:01:00+09:00",
+    },
+    status: {
+      lookup_results: [
+        {
+          lookup_type: "MARKET_INDEX",
+          target_key: "KOSPI",
+          snapshot_role: "HOLDING_PERIOD_BASELINE",
+          lookup_status: "UNAVAILABLE",
+        },
+      ],
+    },
+  };
+  const schema = withProviderMetadata(metadata);
+  schema.widgets = [
+    {
+      widget_id: "positions-table",
+      type: "position_table",
+      title: "보유 종목",
+      data_key: "positions",
+      layout: { desktop_span: 12, mobile_order: 1 },
+      options: {
+        columns: ["stock_name", "market_value", "market_return_rate", "relative_return_rate"],
+        sort: { field: "relative_return_rate", direction: "desc" },
+      },
+    },
+  ];
+  const markup = renderDashboard(schema, [holdings[0]]);
+
+  assert.match(markup, /937,200원/);
+  assert.match(markup, /데이터 부족/);
+});
+
+test("keeps available accounts visible when another holdings lookup fails", () => {
+  const metadata = {
+    attribution: {
+      provider: "Toss Securities",
+      source: "BROKER_API",
+      captured_at: "2026-08-24T09:00:00+09:00",
+      refreshed_at: "2026-08-24T09:01:00+09:00",
+    },
+    status: {
+      lookup_results: [
+        {
+          lookup_type: "HOLDINGS",
+          target_key: "account-failed",
+          target_label: "실패 계좌",
+          lookup_status: "UNAUTHORIZED",
+        },
+        {
+          lookup_type: "HOLDINGS",
+          target_key: "account-available",
+          target_label: "정상 계좌",
+          lookup_status: "AVAILABLE",
+        },
+      ],
+    },
+  };
+  const schema = withProviderMetadata(metadata);
+  schema.widgets = [
+    {
+      widget_id: "positions-table",
+      type: "position_table",
+      title: "보유 종목",
+      data_key: "positions",
+      layout: { desktop_span: 12, mobile_order: 1 },
+      options: {
+        columns: ["stock_name"],
+        sort: { field: "stock_name", direction: "asc" },
+      },
+    },
+  ];
+  const positions = [
+    { ...holdings[0], providerAccountKey: "account-failed" },
+    { ...holdings[1], providerAccountKey: "account-available" },
+    { ...holdings[2], name: "연결 불명 종목" },
+  ];
+  const markup = renderDashboard(schema, positions);
+
+  assert.doesNotMatch(markup, /삼성전자/);
+  assert.doesNotMatch(markup, /연결 불명 종목/);
+  assert.match(markup, /카카오/);
+  assert.doesNotMatch(markup, /보유 데이터를 표시할 수 없습니다/);
+});
+
+test("marks summary totals unavailable when a price input is missing", () => {
+  const metadata = {
+    attribution: {
+      provider: "Toss Securities",
+      source: "MARKET_API",
+      refreshed_at: "2026-08-24T09:01:00+09:00",
+    },
+    status: {
+      data_status: "UNAVAILABLE",
+      lookup_results: [
+        {
+          lookup_type: "PRICE",
+          target_key: "005930",
+          snapshot_role: "CURRENT",
+          lookup_status: "AVAILABLE",
+        },
+      ],
+    },
+  };
+  const markup = renderDashboard(withProviderMetadata(metadata), [holdings[0], holdings[1]]);
+
+  assert.match(markup, /총 평가금액/);
+  assert.match(markup, /계산 불가/);
+  assert.doesNotMatch(markup, /1,750,800원/);
+});
+
+test("renders cost basis source beside average cost in table and cards", () => {
+  const schema = validSchema();
+  schema.widgets = [
+    {
+      widget_id: "positions-table",
+      type: "position_table",
+      title: "보유 종목",
+      data_key: "positions",
+      layout: { desktop_span: 12, mobile_order: 1 },
+      options: {
+        columns: ["stock_name", "average_cost"],
+        sort: { field: "average_cost", direction: "desc" },
+      },
+    },
+    {
+      widget_id: "positions-cards",
+      type: "position_cards",
+      title: "보유 종목 카드",
+      data_key: "positions",
+      layout: { desktop_span: 12, mobile_order: 2 },
+      options: {
+        primary_metric: "relative_return_rate",
+        show_memo_badge: false,
+        filter_strength: "ALL",
+      },
+    },
+  ];
+  const positions = [
+    ["provider", "PROVIDER_REPORTED"],
+    ["ledger", "TRADE_LEDGER_DERIVED"],
+    ["unknown", "UNKNOWN"],
+    ["missing", undefined],
+  ].map(([id, costBasisSource], index) => ({
+    id,
+    name: `테스트 종목 ${index + 1}`,
+    code: `00000${index + 1}`,
+    market: "KOSPI",
+    quantity: 1,
+    averagePrice: 10000 + index,
+    costBasisSource,
+    currentPrice: 11000,
+    valuation: 11000,
+    unrealizedProfit: 1000,
+    realizedProfit: 0,
+    stockReturn: 10,
+    marketReturn: 1,
+    relativeReturn: 9,
+    weight: 33.3,
+    favorite: false,
+    memo: "",
+    alertState: "정상",
+    dataSource: "모의 데이터",
+  }));
+  const markup = renderDashboard(schema, positions);
+
+  assert.match(markup, /provider 제공 원가/);
+  assert.match(markup, /거래 원장 계산 원가/);
+  assert.match(markup, /원가 근거 확인 필요/);
+  assert.equal((markup.match(/원가 근거 확인 필요/g) ?? []).length, 4);
+});
+
+test("renders unavailable average cost for watchlist positions", () => {
+  const schema = validSchema();
+  schema.widgets = [
+    {
+      widget_id: "positions-table",
+      type: "position_table",
+      title: "보유 종목",
+      data_key: "positions",
+      layout: { desktop_span: 12, mobile_order: 1 },
+      options: {
+        columns: ["stock_name", "average_cost"],
+        sort: { field: "average_cost", direction: "desc" },
+      },
+    },
+    {
+      widget_id: "positions-cards",
+      type: "position_cards",
+      title: "보유 종목 카드",
+      data_key: "positions",
+      layout: { desktop_span: 12, mobile_order: 2 },
+      options: {
+        primary_metric: "relative_return_rate",
+        show_memo_badge: false,
+        filter_strength: "ALL",
+      },
+    },
+  ];
+  const watchlistPosition = holdings.find((holding) => holding.quantity === 0);
+  const markup = renderDashboard(schema, [watchlistPosition]);
+
+  assert.match(markup, /SK하이닉스/);
+  assert.match(markup, /계산 불가/);
+  assert.doesNotMatch(markup, /0원/);
+});
+
+test("does not render unattributed AI summaries", () => {
+  const schema = validSchema();
+  schema.source = "AI_PLANNER";
+  schema.description = "출처 없는 provider 요약";
+  const markup = renderDashboard(schema);
+
+  assert.match(markup, /대시보드 스키마를 표시할 수 없습니다/);
+  assert.doesNotMatch(markup, /출처 없는 provider 요약/);
+});
+
+test("renders schema strings as escaped text", () => {
+  const schema = withProviderMetadata();
+  schema.title = "<script>alert('dashboard')</script>";
+  schema.data_requirements[0].provider_metadata.attribution.provider =
+    "<img src=x onerror=alert('provider')>";
+  schema.data_requirements[0].provider_metadata.status.lookup_results[0].target_label =
+    "<svg onload=alert('target')>";
+  const markup = renderDashboard(schema);
+
+  assert.doesNotMatch(markup, /<script>/);
+  assert.doesNotMatch(markup, /<img/);
+  assert.doesNotMatch(markup, /<svg/);
+  assert.match(markup, /&lt;script&gt;/);
+  assert.match(markup, /&lt;img/);
+  assert.match(markup, /&lt;svg/);
 });
 
 test("rejects unsupported filter keys", () => {

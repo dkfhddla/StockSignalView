@@ -147,6 +147,129 @@ h1 {
   white-space: nowrap;
 }
 
+.provider-metadata {
+  margin-bottom: 12px;
+  padding: 10px 0;
+  border-top: 1px solid #d8dee6;
+  border-bottom: 1px solid #d8dee6;
+}
+
+.dashboard-widget.mobile-only {
+  display: none;
+}
+
+.provider-metadata-entry {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(280px, 1.4fr) minmax(220px, auto);
+  align-items: center;
+  gap: 16px;
+}
+
+.provider-metadata-entry + .provider-metadata-entry {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #e6eaf0;
+}
+
+.provider-identity {
+  min-width: 0;
+}
+
+.provider-identity strong,
+.provider-identity span {
+  display: block;
+}
+
+.provider-identity strong {
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+
+.provider-identity span {
+  margin-top: 2px;
+  color: #66717f;
+  font-size: 12px;
+}
+
+.provider-identity .provider-data-key {
+  margin: 0 0 3px;
+  color: #3e4c59;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.provider-timestamps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin: 0;
+}
+
+.provider-timestamps div {
+  min-width: 120px;
+}
+
+.provider-timestamps dt {
+  color: #66717f;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.provider-timestamps dd {
+  margin: 3px 0 0;
+  color: #25313d;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.provider-statuses {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.provider-lookup-result {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  gap: 5px;
+}
+
+.provider-lookup-target {
+  color: #586272;
+  font-size: 11px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.provider-status-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.provider-status-badge.normal {
+  background: #edf7f4;
+  color: #0f766e;
+}
+
+.provider-status-badge.warning {
+  background: #fff3e6;
+  color: #b54708;
+}
+
+.provider-status-badge.error {
+  background: #fff0ef;
+  color: #b42318;
+}
+
 .desktop-table {
   overflow-x: auto;
   border: 1px solid #d8dee6;
@@ -189,6 +312,26 @@ td span {
   margin-top: 3px;
   color: #66717f;
   font-size: 12px;
+}
+
+.average-cost {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.average-cost .average-cost-value {
+  margin: 0;
+  color: inherit;
+  font-size: inherit;
+}
+
+.cost-basis-source {
+  margin-top: 3px;
+  color: #66717f;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .numeric {
@@ -324,6 +467,14 @@ td span {
   font-variant-numeric: tabular-nums;
 }
 
+.card-metrics .average-cost {
+  align-items: flex-start;
+}
+
+.card-metrics .card-average-cost {
+  grid-column: 1 / -1;
+}
+
 .holding-card p {
   margin: 0;
   color: #3e4c59;
@@ -368,6 +519,23 @@ td span {
 
   .data-note {
     white-space: normal;
+  }
+
+  .dashboard-widget.desktop-only {
+    display: none;
+  }
+
+  .dashboard-widget.mobile-only {
+    display: block;
+  }
+
+  .provider-metadata-entry {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .provider-statuses {
+    justify-content: flex-start;
   }
 
   .desktop-table {

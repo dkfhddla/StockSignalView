@@ -1,11 +1,25 @@
 from __future__ import annotations
 
+import re
+from datetime import datetime
 from enum import Enum
 from typing import Annotated, Any, Literal, Union
 
-from pydantic import BaseModel, ConfigDict, Field, PositiveInt, StringConstraints, model_validator
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    Field,
+    PositiveInt,
+    StringConstraints,
+    field_validator,
+    model_validator,
+)
 
 NonEmptyString = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+_AWARE_TIMESTAMP_PATTERN = re.compile(
+    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$"
+)
 
 
 class StrictModel(BaseModel):
@@ -24,6 +38,43 @@ class DashboardDataType(str, Enum):
     TRADES = "trades"
     ALERT_RULES = "alert_rules"
     ALERT_EVENTS = "alert_events"
+
+
+class DashboardDataSource(str, Enum):
+    MANUAL = "MANUAL"
+    BROKER_API = "BROKER_API"
+    MARKET_API = "MARKET_API"
+    IMPORT = "IMPORT"
+    MOCK = "MOCK"
+
+
+class DashboardDataStatus(str, Enum):
+    AVAILABLE = "AVAILABLE"
+    STALE = "STALE"
+    UNAVAILABLE = "UNAVAILABLE"
+
+
+class DashboardLookupStatus(str, Enum):
+    AVAILABLE = "AVAILABLE"
+    PARTIAL = "PARTIAL"
+    STALE = "STALE"
+    UNAVAILABLE = "UNAVAILABLE"
+    UNAUTHORIZED = "UNAUTHORIZED"
+    FORBIDDEN = "FORBIDDEN"
+    PROVIDER_ERROR = "PROVIDER_ERROR"
+    UNSUPPORTED = "UNSUPPORTED"
+
+
+class DashboardLookupType(str, Enum):
+    HOLDINGS = "HOLDINGS"
+    PRICE = "PRICE"
+    MARKET_INDEX = "MARKET_INDEX"
+
+
+class DashboardSnapshotRole(str, Enum):
+    CURRENT = "CURRENT"
+    DAY_BASELINE = "DAY_BASELINE"
+    HOLDING_PERIOD_BASELINE = "HOLDING_PERIOD_BASELINE"
 
 
 class PositionTableColumn(str, Enum):
@@ -56,16 +107,200 @@ class PortfolioPositionFilters(StrictModel):
     holding_status: Literal["HELD_OR_WATCHLISTED"]
 
 
+class DashboardDataAttribution(StrictModel):
+    provider: NonEmptyString
+    source: DashboardDataSource
+    captured_at: AwareDatetime | None = None
+    refreshed_at: AwareDatetime
+
+    @field_validator("captured_at", "refreshed_at", mode="before")
+    @classmethod
+    def validate_timestamp_string(cls, value: Any) -> Any:
+        if value is None:
+            return value
+        if not isinstance(value, str) or _AWARE_TIMESTAMP_PATTERN.fullmatch(value) is None:
+            raise ValueError("timestamp must be a timezone-aware ISO 8601 string")
+        try:
+            datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError as error:
+            raise ValueError("timestamp must be a valid calendar date") from error
+        return value
+
+    @model_validator(mode="before")
+    @classmethod
+    def reject_null_captured_at(cls, data: Any) -> Any:
+        if isinstance(data, dict) and "captured_at" in data and data["captured_at"] is None:
+            raise ValueError("captured_at must be omitted or define a timestamp")
+        return data
+
+
+class DashboardLookupResult(StrictModel):
+    lookup_type: DashboardLookupType
+    target_key: NonEmptyString
+    target_label: NonEmptyString | None = None
+    snapshot_role: DashboardSnapshotRole | None = None
+    lookup_status: DashboardLookupStatus
+
+    @model_validator(mode="before")
+    @classmethod
+    def reject_null_optional_fields(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "target_label" in data and data["target_label"] is None:
+                raise ValueError("target_label must be omitted or define a display label")
+            if "snapshot_role" in data and data["snapshot_role"] is None:
+                raise ValueError("snapshot_role must be omitted or define a supported role")
+        return data
+
+    @model_validator(mode="after")
+    def validate_lookup_contract(self) -> DashboardLookupResult:
+        if self.lookup_type in {
+            DashboardLookupType.PRICE,
+            DashboardLookupType.MARKET_INDEX,
+        } and self.snapshot_role is None:
+            raise ValueError("PRICE and MARKET_INDEX lookup results require snapshot_role")
+        if self.lookup_type is DashboardLookupType.HOLDINGS and self.snapshot_role is not None:
+            raise ValueError("HOLDINGS lookup results cannot define snapshot_role")
+        if self.lookup_type is DashboardLookupType.HOLDINGS and self.target_label is None:
+            raise ValueError("HOLDINGS lookup results require target_label")
+        if (
+            self.lookup_type is DashboardLookupType.HOLDINGS
+            and self.target_label is not None
+            and self.target_label.strip() == self.target_key.strip()
+        ):
+            raise ValueError("HOLDINGS target_label must not expose target_key")
+        return self
+
+
+class DashboardProviderStatus(StrictModel):
+    data_status: DashboardDataStatus | None = None
+    lookup_results: list[DashboardLookupResult] | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def reject_null_optional_statuses(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "data_status" in data and data["data_status"] is None:
+                raise ValueError("data_status must be omitted or define a supported status")
+            if "lookup_results" in data and data["lookup_results"] is None:
+                raise ValueError("lookup_results must be omitted or define lookup results")
+        return data
+
+    @model_validator(mode="after")
+    def validate_lookup_results(self) -> DashboardProviderStatus:
+        if self.lookup_results is None:
+            return self
+        if not self.lookup_results:
+            raise ValueError("lookup_results must contain at least one result")
+
+        lookup_targets = [
+            (result.lookup_type, result.target_key, result.snapshot_role)
+            for result in self.lookup_results
+        ]
+        if len(lookup_targets) != len(set(lookup_targets)):
+            raise ValueError("lookup_results targets must be unique")
+        snapshot_label_groups: dict[
+            tuple[DashboardLookupType, DashboardSnapshotRole],
+            list[DashboardLookupResult],
+        ] = {}
+        for result in self.lookup_results:
+            if result.lookup_type not in {
+                DashboardLookupType.PRICE,
+                DashboardLookupType.MARKET_INDEX,
+            }:
+                continue
+            snapshot_label_groups.setdefault(
+                (result.lookup_type, result.snapshot_role), []
+            ).append(result)
+        if any(
+            len(results) > 1 and any(result.target_label is None for result in results)
+            for results in snapshot_label_groups.values()
+        ):
+            raise ValueError(
+                "same-role PRICE and MARKET_INDEX lookup results require target_label"
+            )
+        return self
+
+
+class DashboardProviderMetadata(StrictModel):
+    attribution: DashboardDataAttribution
+    status: DashboardProviderStatus
+
+    @model_validator(mode="after")
+    def validate_status_for_attribution(self) -> DashboardProviderMetadata:
+        if (
+            self.attribution.source
+            in {DashboardDataSource.BROKER_API, DashboardDataSource.MARKET_API}
+            and self.status.lookup_results is None
+        ):
+            raise ValueError("provider API sources require lookup_results")
+        lookup_results = self.status.lookup_results or []
+        if (
+            self.attribution.source is DashboardDataSource.MANUAL
+            and self.status.lookup_results is not None
+        ):
+            raise ValueError("MANUAL source cannot define lookup_results")
+        if (
+            self.attribution.source is DashboardDataSource.MARKET_API
+            and any(
+                result.lookup_type is DashboardLookupType.HOLDINGS
+                for result in lookup_results
+            )
+        ):
+            raise ValueError("MARKET_API source cannot define HOLDINGS lookup results")
+        if (
+            self.status.data_status
+            in {DashboardDataStatus.AVAILABLE, DashboardDataStatus.STALE}
+            and self.attribution.captured_at is None
+        ):
+            raise ValueError("AVAILABLE and STALE data require captured_at")
+        if (
+            any(
+                result.lookup_type is DashboardLookupType.HOLDINGS
+                and result.lookup_status is DashboardLookupStatus.AVAILABLE
+                for result in lookup_results
+            )
+            and self.attribution.captured_at is None
+        ):
+            raise ValueError("AVAILABLE HOLDINGS lookup results require captured_at")
+        snapshot_lookup_count = sum(
+            result.lookup_type
+            in {DashboardLookupType.PRICE, DashboardLookupType.MARKET_INDEX}
+            for result in lookup_results
+        )
+        if (
+            self.status.data_status is not None
+            and snapshot_lookup_count != 1
+        ):
+            raise ValueError(
+                "data_status requires exactly one PRICE or MARKET_INDEX lookup result"
+            )
+        if (
+            snapshot_lookup_count > 1
+            and (
+                self.status.data_status is not None
+                or self.attribution.captured_at is not None
+            )
+        ):
+            raise ValueError(
+                "scalar data_status and captured_at cannot represent multiple snapshot lookups"
+            )
+        return self
+
+
 class DashboardDataRequirement(StrictModel):
     key: NonEmptyString
     type: DashboardDataType
     filters: PortfolioPositionFilters | None = None
+    provider_metadata: DashboardProviderMetadata | None = None
 
     @model_validator(mode="before")
     @classmethod
-    def reject_null_filters(cls, data: Any) -> Any:
-        if isinstance(data, dict) and "filters" in data and data["filters"] is None:
-            raise ValueError("filters must be omitted or define a supported filter")
+    def reject_null_optional_fields(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "filters" in data and data["filters"] is None:
+                raise ValueError("filters must be omitted or define a supported filter")
+            if "provider_metadata" in data and data["provider_metadata"] is None:
+                raise ValueError("provider_metadata must be omitted or define metadata")
         return data
 
     @model_validator(mode="after")

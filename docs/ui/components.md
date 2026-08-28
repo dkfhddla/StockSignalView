@@ -73,7 +73,7 @@ PC 대시보드의 기본 컴포넌트다.
 - provider 오류
 - provider 미지원
 
-다음 provider 상태 라벨과 배지 매핑은 Dashboard Schema와 양쪽 validator에 후속 메타데이터 계약이 도입된 뒤 적용하며, 이 문서가 표시 계약을 소유한다.
+다음 provider 상태 라벨과 배지 매핑은 Dashboard Schema와 양쪽 validator가 허용한 메타데이터에 적용하며, 이 문서가 표시 계약을 소유한다.
 
 - `data_status=AVAILABLE`: 값 최신
 - `data_status=STALE`: 값 갱신 지연
@@ -87,13 +87,13 @@ PC 대시보드의 기본 컴포넌트다.
 - `lookup_status=PROVIDER_ERROR`: provider 오류
 - `lookup_status=UNSUPPORTED`: provider 미지원
 
-가격·지수 스냅샷의 역할 라벨은 다음과 같이 표시한다.
+가격·지수 스냅샷 전용 데이터 요구사항이 추가되면 역할 라벨은 다음과 같이 표시한다.
 
 - `snapshot_role=CURRENT`: 현재가 또는 현재 지수
 - `snapshot_role=DAY_BASELINE`: 당일 기준 가격 또는 지수
 - `snapshot_role=HOLDING_PERIOD_BASELINE`: 보유기간 기준 가격 또는 지수
 
-각 가격·지수 상태 배지는 같은 스냅샷의 역할 라벨과 기준 시각 근처에 표시한다. `ProviderHoldingSnapshot.captured_at`은 `보유 현황 기준`으로 표시하고 provider 기반 보유 수량과 평균 매수가 가까이에 둔다. Provider 데이터 상태 배지는 provider명, 데이터 출처, 마지막 갱신 시각과 같은 메타데이터 영역에 둔다. 둘 이상의 비정상 상태가 있으면 동시에 표시한다. 자격 증명 표시는 `docs/specs/read-only-market-data-provider.md`의 비노출 경계를 따른다.
+가격·지수 스냅샷 전용 계약에서는 각 상태 배지를 같은 스냅샷의 역할 라벨과 기준 시각 근처에 표시한다. `ProviderHoldingSnapshot.captured_at`은 `보유 현황 기준`으로 표시하고 provider 기반 보유 수량과 평균 매수가 가까이에 둔다. Provider 데이터 상태 배지는 provider명, 데이터 출처, 마지막 갱신 시각과 같은 메타데이터 영역에 둔다. 둘 이상의 비정상 상태가 있으면 동시에 표시한다. 자격 증명 표시는 `docs/specs/read-only-market-data-provider.md`의 비노출 경계를 따른다.
 
 Provider 기반 평균 매수가의 원가 근거 라벨은 다음과 같이 표시한다.
 
@@ -101,7 +101,7 @@ Provider 기반 평균 매수가의 원가 근거 라벨은 다음과 같이 표
 - `cost_basis_source=TRADE_LEDGER_DERIVED`: 거래 원장 계산 원가
 - `cost_basis_source=UNKNOWN`: 원가 근거 확인 필요
 
-원가 근거 라벨은 평균 매수가 가까이에 표시한다. 조회 상태의 대상명은 `lookup_type`과 `target_key`로 결정하되, 계좌 식별자 같은 내부 연결 키를 그대로 노출하지 않고 `ProviderLookupResult.target_label` 또는 연결 설정에서 해석한 계좌 표시명, 종목명, 시장명처럼 안전한 라벨을 사용한다. `HOLDINGS` 조회가 snapshot 없이 실패한 경우에도 이 안전한 계좌 표시명을 반드시 제공한다. 가격·지수 조회 상태에는 같은 대상의 기준값을 구분할 수 있도록 해당 `snapshot_role`의 역할 라벨도 함께 표시한다.
+원가 근거 라벨은 평균 매수가 가까이에 표시한다. 원가 근거가 없는 유효 평균가는 `UNKNOWN`으로 처리해 `원가 근거 확인 필요`을 표시한다. 조회 상태의 대상명은 `lookup_results[*].lookup_type`과 `target_key`로 결정하되, 내부 연결 키를 그대로 노출하지 않고 `target_label`이 있으면 그 값을 사용한다. `HOLDINGS` 조회는 snapshot 없이 실패한 경우에도 연결 설정 또는 등록된 provider 계정에서 해석한 안전한 계좌 표시명을 `target_label`로 반드시 제공하며, 이 라벨은 내부 `target_key`와 같을 수 없다. 가격·지수 조회는 표시명이 없으면 조회 유형의 일반 라벨을 사용한다. 가격·지수 조회 상태에는 같은 대상의 기준값을 구분할 수 있도록 해당 `snapshot_role`의 역할 라벨도 함께 표시한다. snapshot 없는 `HOLDINGS` 실패는 연결된 보유 위젯을 빈 상태로 표시하고, 내부 포지션 키와 연결 가능한 `PRICE` 실패는 해당 행의 가격·수익률 계산 값을 `계산 불가`로 표시한다.
 
 ## 수익률 표시
 
