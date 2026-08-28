@@ -4,6 +4,7 @@ export type CostBasisSource = "PROVIDER_REPORTED" | "TRADE_LEDGER_DERIVED" | "UN
 
 export type Holding = {
   id: string;
+  providerAccountKey?: string;
   name: string;
   code: string;
   market: Market;

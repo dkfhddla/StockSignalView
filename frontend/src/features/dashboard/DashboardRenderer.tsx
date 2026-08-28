@@ -121,7 +121,7 @@ function WidgetRenderer({
   const resolvedPositions = resolvePositionAvailability(positions, requirements);
   if (resolvedPositions.unavailable) {
     return (
-      <WidgetFrame metadataPanel={metadataPanel}>
+      <WidgetFrame metadataPanel={metadataPanel} visibility={getWidgetVisibility(widget.type)}>
         <ProviderDataUnavailable title={widget.title} />
       </WidgetFrame>
     );
@@ -136,13 +136,13 @@ function WidgetRenderer({
       );
     case "position_table":
       return (
-        <WidgetFrame metadataPanel={metadataPanel} visibility="desktop-only">
+        <WidgetFrame metadataPanel={metadataPanel} visibility={getWidgetVisibility(widget.type)}>
           <PositionTable options={widget.options} positions={resolvedPositions.positions} title={widget.title} />
         </WidgetFrame>
       );
     case "position_cards":
       return (
-        <WidgetFrame metadataPanel={metadataPanel} visibility="mobile-only">
+        <WidgetFrame metadataPanel={metadataPanel} visibility={getWidgetVisibility(widget.type)}>
           <PositionCards options={widget.options} positions={resolvedPositions.positions} title={widget.title} />
         </WidgetFrame>
       );
@@ -177,6 +177,12 @@ function getWidgetDataRequirements(
   return dataKeys
     .map((dataKey) => dataRequirements.get(dataKey))
     .filter((requirement): requirement is DashboardDataRequirement => requirement !== undefined);
+}
+
+function getWidgetVisibility(widgetType: DashboardWidget["type"]) {
+  if (widgetType === "position_table") return "desktop-only";
+  if (widgetType === "position_cards") return "mobile-only";
+  return undefined;
 }
 
 function ProviderMetadataPanel({
@@ -346,40 +352,80 @@ function resolvePositionAvailability(
   positions: Holding[],
   requirements: DashboardDataRequirement[],
 ) {
-  const lookupResults = requirements.flatMap(
-    (requirement) => requirement.provider_metadata?.status.lookup_results ?? [],
+  const lookupEntries = requirements.flatMap((requirement) => {
+    const metadata = requirement.provider_metadata;
+    return metadata
+      ? (metadata.status.lookup_results ?? []).map((result) => ({
+          dataStatus: metadata.status.data_status,
+          result,
+        }))
+      : [];
+  });
+  const holdingsEntries = lookupEntries.filter(({ result }) => result.lookup_type === "HOLDINGS");
+  const unavailableHoldingsEntries = holdingsEntries.filter(({ result }) =>
+    unavailableLookupStatuses.includes(result.lookup_status),
   );
-  const hasUnavailableHoldings = lookupResults.some(
-    (result) => result.lookup_type === "HOLDINGS" && unavailableLookupStatuses.includes(result.lookup_status),
-  );
-  if (hasUnavailableHoldings) return { unavailable: true, positions: [] };
+  if (holdingsEntries.length > 0 && holdingsEntries.length === unavailableHoldingsEntries.length) {
+    return { unavailable: true, positions: [] };
+  }
 
-  const unavailablePriceTargets = new Set(
-    lookupResults
-      .filter(
-        (result) => result.lookup_type === "PRICE" && unavailableLookupStatuses.includes(result.lookup_status),
-      )
-      .map((result) => result.target_key),
+  const unavailableAccountKeys = new Set(
+    unavailableHoldingsEntries.map(({ result }) => result.target_key),
+  );
+  const availablePositions = positions.filter(
+    (holding) => !holding.providerAccountKey || !unavailableAccountKeys.has(holding.providerAccountKey),
   );
 
-  return {
-    unavailable: false,
-    positions: positions.map((holding) =>
-      unavailablePriceTargets.has(holding.id) ? toUnavailablePosition(holding) : holding,
-    ),
-  };
+  const resolvedPositions = lookupEntries.reduce(
+    (resolvedPositions, { dataStatus, result }) => {
+      const snapshotUnavailable =
+        unavailableLookupStatuses.includes(result.lookup_status) || dataStatus === "UNAVAILABLE";
+      if (!snapshotUnavailable) return resolvedPositions;
+
+      if (result.lookup_type === "PRICE") {
+        return resolvedPositions.map((holding) =>
+          holding.id === result.target_key ? toUnavailablePricePosition(holding, result.snapshot_role) : holding,
+        );
+      }
+      if (result.lookup_type === "MARKET_INDEX") {
+        return resolvedPositions.map((holding) =>
+          holding.market === result.target_key ? toUnavailableMarketPosition(holding) : holding,
+        );
+      }
+      return resolvedPositions;
+    },
+    availablePositions,
+  );
+
+  return { unavailable: false, positions: resolvedPositions };
 }
 
-function toUnavailablePosition(holding: Holding): Holding {
+function toUnavailablePricePosition(holding: Holding, snapshotRole: DashboardSnapshotRole | undefined): Holding {
+  if (snapshotRole !== "CURRENT") {
+    return {
+      ...holding,
+      stockReturn: null,
+      relativeReturn: null,
+      alertState: "데이터 부족",
+    };
+  }
   return {
     ...holding,
     currentPrice: null,
     valuation: null,
     unrealizedProfit: null,
     stockReturn: null,
-    marketReturn: null,
     relativeReturn: null,
     weight: null,
+    alertState: "데이터 부족",
+  };
+}
+
+function toUnavailableMarketPosition(holding: Holding): Holding {
+  return {
+    ...holding,
+    marketReturn: null,
+    relativeReturn: null,
     alertState: "데이터 부족",
   };
 }

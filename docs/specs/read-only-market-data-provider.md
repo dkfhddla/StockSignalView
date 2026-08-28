@@ -98,7 +98,7 @@ KOSPI 종목은 KOSPI 지수, KOSDAQ 종목은 KOSDAQ 지수를 기본 비교 �
 
 provider 데이터는 검증 가능한 Dashboard Schema와 허용된 위젯을 통해서만 화면에 표시되어야 한다.
 
-인증 실패, 권한 없음, provider 오류, 데이터 지연의 원인은 `ProviderLookupResult.lookup_status`로 계산 결과와 대시보드 입력까지 보존한다. Dashboard Schema는 데이터 요구사항의 `provider_metadata.status.lookup_status`로 이 값을 전달하고, Widget Registry는 연결된 위젯 가까이에 별도 상태 배지로 표시한다.
+인증 실패, 권한 없음, provider 오류, 데이터 지연의 원인은 `ProviderLookupResult.lookup_status`로 계산 결과와 대시보드 입력까지 보존한다. Dashboard Schema는 데이터 요구사항의 `provider_metadata.status.lookup_results[*].lookup_status`로 이 값을 대상·역할별로 전달하고, Widget Registry는 연결된 위젯 가까이에 별도 상태 배지로 표시한다.
 
 이번 metadata 계약은 기존 허용 위젯과 계산 컬럼을 바꾸지 않는다. `average_cost_current_return_rate`, `daily_*`, `holding_period_*`, `snapshot_role`을 새 위젯 column이나 option으로 표시하려면 Dashboard Schema, Widget Registry, 백엔드·프런트엔드 validator를 별도로 함께 확장해야 한다.
 

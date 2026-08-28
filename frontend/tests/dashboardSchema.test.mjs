@@ -380,7 +380,7 @@ test("marks a position unavailable when its price lookup fails", () => {
           lookup_type: "PRICE",
           target_key: "005930",
           snapshot_role: "CURRENT",
-          lookup_status: "UNAVAILABLE",
+          lookup_status: "AVAILABLE",
         },
       ],
     },
@@ -404,6 +404,158 @@ test("marks a position unavailable when its price lookup fails", () => {
   assert.match(markup, /삼성전자/);
   assert.match(markup, /계산 불가/);
   assert.doesNotMatch(markup, /937,200원/);
+});
+
+test("keeps current values when only a price baseline is unavailable", () => {
+  const metadata = {
+    attribution: {
+      provider: "Toss Securities",
+      source: "MARKET_API",
+      refreshed_at: "2026-08-24T09:01:00+09:00",
+    },
+    status: {
+      lookup_results: [
+        {
+          lookup_type: "PRICE",
+          target_key: "005930",
+          snapshot_role: "HOLDING_PERIOD_BASELINE",
+          lookup_status: "UNAVAILABLE",
+        },
+      ],
+    },
+  };
+  const schema = withProviderMetadata(metadata);
+  schema.widgets = [
+    {
+      widget_id: "positions-table",
+      type: "position_table",
+      title: "보유 종목",
+      data_key: "positions",
+      layout: { desktop_span: 12, mobile_order: 1 },
+      options: {
+        columns: ["stock_name", "market_value", "stock_return_rate", "relative_return_rate"],
+        sort: { field: "relative_return_rate", direction: "desc" },
+      },
+    },
+  ];
+  const markup = renderDashboard(schema, [holdings[0]]);
+
+  assert.match(markup, /937,200원/);
+  assert.match(markup, /데이터 부족/);
+});
+
+test("marks market metrics unavailable without hiding price values", () => {
+  const metadata = {
+    attribution: {
+      provider: "Toss Securities",
+      source: "MARKET_API",
+      refreshed_at: "2026-08-24T09:01:00+09:00",
+    },
+    status: {
+      lookup_results: [
+        {
+          lookup_type: "MARKET_INDEX",
+          target_key: "KOSPI",
+          snapshot_role: "HOLDING_PERIOD_BASELINE",
+          lookup_status: "UNAVAILABLE",
+        },
+      ],
+    },
+  };
+  const schema = withProviderMetadata(metadata);
+  schema.widgets = [
+    {
+      widget_id: "positions-table",
+      type: "position_table",
+      title: "보유 종목",
+      data_key: "positions",
+      layout: { desktop_span: 12, mobile_order: 1 },
+      options: {
+        columns: ["stock_name", "market_value", "market_return_rate", "relative_return_rate"],
+        sort: { field: "relative_return_rate", direction: "desc" },
+      },
+    },
+  ];
+  const markup = renderDashboard(schema, [holdings[0]]);
+
+  assert.match(markup, /937,200원/);
+  assert.match(markup, /데이터 부족/);
+});
+
+test("keeps available accounts visible when another holdings lookup fails", () => {
+  const metadata = {
+    attribution: {
+      provider: "Toss Securities",
+      source: "BROKER_API",
+      captured_at: "2026-08-24T09:00:00+09:00",
+      refreshed_at: "2026-08-24T09:01:00+09:00",
+    },
+    status: {
+      lookup_results: [
+        {
+          lookup_type: "HOLDINGS",
+          target_key: "account-failed",
+          target_label: "실패 계좌",
+          lookup_status: "UNAUTHORIZED",
+        },
+        {
+          lookup_type: "HOLDINGS",
+          target_key: "account-available",
+          target_label: "정상 계좌",
+          lookup_status: "AVAILABLE",
+        },
+      ],
+    },
+  };
+  const schema = withProviderMetadata(metadata);
+  schema.widgets = [
+    {
+      widget_id: "positions-table",
+      type: "position_table",
+      title: "보유 종목",
+      data_key: "positions",
+      layout: { desktop_span: 12, mobile_order: 1 },
+      options: {
+        columns: ["stock_name"],
+        sort: { field: "stock_name", direction: "asc" },
+      },
+    },
+  ];
+  const positions = [
+    { ...holdings[0], providerAccountKey: "account-failed" },
+    { ...holdings[1], providerAccountKey: "account-available" },
+  ];
+  const markup = renderDashboard(schema, positions);
+
+  assert.doesNotMatch(markup, /삼성전자/);
+  assert.match(markup, /카카오/);
+  assert.doesNotMatch(markup, /보유 데이터를 표시할 수 없습니다/);
+});
+
+test("marks summary totals unavailable when a price input is missing", () => {
+  const metadata = {
+    attribution: {
+      provider: "Toss Securities",
+      source: "MARKET_API",
+      refreshed_at: "2026-08-24T09:01:00+09:00",
+    },
+    status: {
+      data_status: "UNAVAILABLE",
+      lookup_results: [
+        {
+          lookup_type: "PRICE",
+          target_key: "005930",
+          snapshot_role: "CURRENT",
+          lookup_status: "AVAILABLE",
+        },
+      ],
+    },
+  };
+  const markup = renderDashboard(withProviderMetadata(metadata), [holdings[0], holdings[1]]);
+
+  assert.match(markup, /총 평가금액/);
+  assert.match(markup, /계산 불가/);
+  assert.doesNotMatch(markup, /1,750,800원/);
 });
 
 test("renders cost basis source beside average cost in table and cards", () => {
