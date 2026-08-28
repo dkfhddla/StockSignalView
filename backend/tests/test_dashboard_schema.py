@@ -15,7 +15,6 @@ def provider_metadata() -> dict:
             "refreshed_at": "2026-08-24T09:01:00+09:00",
         },
         "status": {
-            "data_status": "STALE",
             "lookup_results": [
                 {
                     "lookup_type": "HOLDINGS",
@@ -144,20 +143,25 @@ def test_dashboard_schema_rejects_scalar_snapshot_metadata_for_distinct_roles(
     assert "cannot represent multiple snapshot lookups" in str(exc_info.value)
 
 
-def test_dashboard_schema_requires_captured_at_for_available_holdings(
+def test_dashboard_schema_requires_captured_at_for_available_snapshot(
     valid_dashboard_payload: dict,
 ) -> None:
     payload = deepcopy(valid_dashboard_payload)
     metadata = provider_metadata()
     metadata["attribution"].pop("captured_at")
-    metadata["status"].pop("data_status")
-    metadata["status"]["lookup_results"][0]["lookup_status"] = "AVAILABLE"
+    metadata["status"]["data_status"] = "AVAILABLE"
+    metadata["status"]["lookup_results"][0] = {
+        "lookup_type": "PRICE",
+        "target_key": "stock-005930",
+        "snapshot_role": "CURRENT",
+        "lookup_status": "AVAILABLE",
+    }
     payload["data_requirements"][0]["provider_metadata"] = metadata
 
     with pytest.raises(ValidationError) as exc_info:
         DashboardSchema.model_validate(payload)
 
-    assert "AVAILABLE HOLDINGS lookup results require captured_at" in str(exc_info.value)
+    assert "AVAILABLE and STALE data require captured_at" in str(exc_info.value)
 
 
 @pytest.mark.parametrize(
@@ -258,10 +262,18 @@ def test_dashboard_schema_requires_captured_at_for_available_holdings(
             lambda metadata: metadata["status"].update(lookup_status="AVAILABLE"),
             "extra_forbidden",
         ),
+        (
+            lambda metadata: metadata["status"].update(data_status="UNAVAILABLE"),
+            "data_status requires exactly one PRICE or MARKET_INDEX lookup result",
+        ),
         (lambda metadata: metadata["attribution"].pop("captured_at"), "require captured_at"),
         (
             lambda metadata: metadata["attribution"].update(source="MANUAL"),
             "MANUAL source cannot define lookup_results",
+        ),
+        (
+            lambda metadata: metadata["attribution"].update(source="MARKET_API"),
+            "MARKET_API source cannot define HOLDINGS lookup results",
         ),
         (lambda metadata: metadata["status"].update(error="token expired"), "extra_forbidden"),
     ],
@@ -280,6 +292,38 @@ def test_dashboard_schema_rejects_invalid_provider_metadata(
         DashboardSchema.model_validate(payload)
 
     assert expected_error in str(exc_info.value)
+
+
+def test_dashboard_schema_rejects_ambiguous_snapshot_lookup_labels(
+    valid_dashboard_payload: dict,
+) -> None:
+    payload = deepcopy(valid_dashboard_payload)
+    metadata = provider_metadata()
+    metadata["attribution"].pop("captured_at")
+    metadata["status"]["lookup_results"].extend(
+        [
+            {
+                "lookup_type": "PRICE",
+                "target_key": "stock-005930",
+                "snapshot_role": "CURRENT",
+                "lookup_status": "AVAILABLE",
+            },
+            {
+                "lookup_type": "PRICE",
+                "target_key": "stock-035720",
+                "snapshot_role": "CURRENT",
+                "lookup_status": "UNAVAILABLE",
+            },
+        ]
+    )
+    payload["data_requirements"][0]["provider_metadata"] = metadata
+
+    with pytest.raises(ValidationError) as exc_info:
+        DashboardSchema.model_validate(payload)
+
+    assert "same-role PRICE and MARKET_INDEX lookup results require target_label" in str(
+        exc_info.value
+    )
 
 
 @pytest.mark.parametrize(

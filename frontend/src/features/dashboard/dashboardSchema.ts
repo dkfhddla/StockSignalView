@@ -310,6 +310,27 @@ function isProviderMetadataValid(metadata: unknown): metadata is DashboardProvid
     );
     if (!hasUniqueValues(lookupTargets)) return false;
     if (
+      metadata.attribution.source === "MARKET_API" &&
+      metadata.status.lookup_results.some((result) => result.lookup_type === "HOLDINGS")
+    ) {
+      return false;
+    }
+    const snapshotLookups = metadata.status.lookup_results.filter(
+      (result) => result.lookup_type === "PRICE" || result.lookup_type === "MARKET_INDEX",
+    );
+    const snapshotLabelGroups = new Map<string, DashboardLookupResult[]>();
+    for (const result of snapshotLookups) {
+      const groupKey = `${result.lookup_type}:${result.snapshot_role}`;
+      snapshotLabelGroups.set(groupKey, [...(snapshotLabelGroups.get(groupKey) ?? []), result]);
+    }
+    if (
+      [...snapshotLabelGroups.values()].some(
+        (results) => results.length > 1 && results.some((result) => result.target_label === undefined),
+      )
+    ) {
+      return false;
+    }
+    if (
       metadata.status.lookup_results.some(
         (result) => result.lookup_type === "HOLDINGS" && result.lookup_status === "AVAILABLE",
       ) &&
@@ -317,9 +338,8 @@ function isProviderMetadataValid(metadata: unknown): metadata is DashboardProvid
     ) {
       return false;
     }
-    const snapshotLookupCount = metadata.status.lookup_results.filter(
-      (result) => result.lookup_type === "PRICE" || result.lookup_type === "MARKET_INDEX",
-    ).length;
+    const snapshotLookupCount = snapshotLookups.length;
+    if (metadata.status.data_status !== undefined && snapshotLookupCount !== 1) return false;
     if (
       snapshotLookupCount > 1 &&
       (metadata.status.data_status !== undefined || metadata.attribution.captured_at !== undefined)

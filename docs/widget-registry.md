@@ -160,7 +160,7 @@ Provider 메타데이터가 없는 기존 로컬 `PRESET`과 `USER_SAVED`의 수
 - `data_status`와 `lookup_results[*].lookup_status`를 하나의 상태로 접어 표시하지 않는다.
 - `STALE`, `PARTIAL`, `UNAVAILABLE`, `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED`는 정상 계산값과 같은 시각 위계로 표시하지 않는다.
 - 일부 행이나 지표만 사용할 수 없고 나머지를 안전하게 표시할 수 있으면 위젯 렌더링 상태를 `PARTIAL`로, 핵심 데이터를 모두 사용할 수 없으면 `UNAVAILABLE`로 표시한다.
-- 각 `lookup_results[*].lookup_status`는 보유 조회에서 같은 레코드의 `lookup_type`과 `target_key`, 가격·지수 조회에서 여기에 `snapshot_role`까지 포함한 조합으로 해당 행이나 계산 입력에 연결한다. 메타데이터 영역에는 내부 `target_key` 대신 안전한 `target_label` 또는 조회 유형 라벨과 필요한 역할 라벨을 표시한다.
+- 각 `lookup_results[*].lookup_status`는 같은 `provider_metadata.attribution.provider` 안에서 보유 조회는 `lookup_type`과 `target_key`, 가격·지수 조회는 여기에 `snapshot_role`까지 포함한 조합으로 해당 행이나 계산 입력에 연결한다. 메타데이터 영역에는 내부 `target_key` 대신 안전한 `target_label` 또는 조회 유형 라벨과 필요한 역할 라벨을 표시하며, 같은 조회 유형·역할의 가격·지수 결과가 여럿이면 각 결과의 `target_label`을 표시한다.
 - 가격 또는 지수 값의 기준 시각과 시스템의 마지막 갱신 시각을 서로 대체해서 표시하지 않는다.
 - 가격·지수 스냅샷 전용 데이터 요구사항이 추가되면 `captured_at`과 `data_status`를 해당 `snapshot_role`의 UI 라벨과 같은 묶음으로 표시한다.
 - `ProviderHoldingSnapshot.captured_at`은 가격·지수 기준 시각과 구분하고 provider 기반 보유 수량과 평균 매수가 가까이에 표시한다.

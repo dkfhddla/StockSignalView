@@ -198,6 +198,26 @@ class DashboardProviderStatus(StrictModel):
         ]
         if len(lookup_targets) != len(set(lookup_targets)):
             raise ValueError("lookup_results targets must be unique")
+        snapshot_label_groups: dict[
+            tuple[DashboardLookupType, DashboardSnapshotRole],
+            list[DashboardLookupResult],
+        ] = {}
+        for result in self.lookup_results:
+            if result.lookup_type not in {
+                DashboardLookupType.PRICE,
+                DashboardLookupType.MARKET_INDEX,
+            }:
+                continue
+            snapshot_label_groups.setdefault(
+                (result.lookup_type, result.snapshot_role), []
+            ).append(result)
+        if any(
+            len(results) > 1 and any(result.target_label is None for result in results)
+            for results in snapshot_label_groups.values()
+        ):
+            raise ValueError(
+                "same-role PRICE and MARKET_INDEX lookup results require target_label"
+            )
         return self
 
 
@@ -213,18 +233,26 @@ class DashboardProviderMetadata(StrictModel):
             and self.status.lookup_results is None
         ):
             raise ValueError("provider API sources require lookup_results")
+        lookup_results = self.status.lookup_results or []
         if (
             self.attribution.source is DashboardDataSource.MANUAL
             and self.status.lookup_results is not None
         ):
             raise ValueError("MANUAL source cannot define lookup_results")
         if (
+            self.attribution.source is DashboardDataSource.MARKET_API
+            and any(
+                result.lookup_type is DashboardLookupType.HOLDINGS
+                for result in lookup_results
+            )
+        ):
+            raise ValueError("MARKET_API source cannot define HOLDINGS lookup results")
+        if (
             self.status.data_status
             in {DashboardDataStatus.AVAILABLE, DashboardDataStatus.STALE}
             and self.attribution.captured_at is None
         ):
             raise ValueError("AVAILABLE and STALE data require captured_at")
-        lookup_results = self.status.lookup_results or []
         if (
             any(
                 result.lookup_type is DashboardLookupType.HOLDINGS
@@ -239,6 +267,13 @@ class DashboardProviderMetadata(StrictModel):
             in {DashboardLookupType.PRICE, DashboardLookupType.MARKET_INDEX}
             for result in lookup_results
         )
+        if (
+            self.status.data_status is not None
+            and snapshot_lookup_count != 1
+        ):
+            raise ValueError(
+                "data_status requires exactly one PRICE or MARKET_INDEX lookup result"
+            )
         if (
             snapshot_lookup_count > 1
             and (

@@ -372,9 +372,21 @@ function resolvePositionAvailability(
   const unavailableAccountKeys = new Set(
     unavailableHoldingsEntries.map(({ result }) => result.target_key),
   );
-  const availablePositions = positions.filter(
-    (holding) => !holding.providerAccountKey || !unavailableAccountKeys.has(holding.providerAccountKey),
+  const availableAccountKeys = new Set(
+    holdingsEntries
+      .filter(({ result }) => result.lookup_status === "AVAILABLE")
+      .map(({ result }) => result.target_key),
   );
+  const availablePositions =
+    unavailableAccountKeys.size === 0
+      ? positions
+      : positions.filter(
+          (holding) =>
+            holding.providerAccountKey !== undefined && availableAccountKeys.has(holding.providerAccountKey),
+        );
+  if (positions.length > 0 && availablePositions.length === 0) {
+    return { unavailable: true, positions: [] };
+  }
 
   const resolvedPositions = lookupEntries.reduce(
     (resolvedPositions, { dataStatus, result }) => {
@@ -401,7 +413,7 @@ function resolvePositionAvailability(
 }
 
 function toUnavailablePricePosition(holding: Holding, snapshotRole: DashboardSnapshotRole | undefined): Holding {
-  if (snapshotRole !== "CURRENT") {
+  if (snapshotRole === "HOLDING_PERIOD_BASELINE") {
     return {
       ...holding,
       stockReturn: null,
@@ -409,6 +421,7 @@ function toUnavailablePricePosition(holding: Holding, snapshotRole: DashboardSna
       alertState: "데이터 부족",
     };
   }
+  if (snapshotRole !== "CURRENT") return holding;
   return {
     ...holding,
     currentPrice: null,
