@@ -46,13 +46,13 @@ MVP에서는 수수료와 세금을 선택 입력으로 둘 수 있으며, 입�
 
 사용자는 계산 결과를 직접 입력하지 않는다. 계산 결과는 거래, 가격, 시장 지수 입력값에서 시스템이 산출한다.
 
-### 공통 조회 상태
+### 공통 상태 값
 
-provider 또는 내부 입력 경로가 값을 조회하거나 정규화할 때의 성공/실패 상태다.
+provider 또는 내부 입력 경로의 조회 상태와 owner snapshot 값의 사용 가능 상태에 공통으로 쓰는 상태 값이다.
 
 허용 상태:
 
-- `AVAILABLE`: 값을 사용할 수 있음
+- `AVAILABLE`: 상태를 적용한 문맥에서 정상임. `ProviderLookupResult.lookup_status`에서는 provider 조회 또는 정규화 요청이 성공했음을, `PriceSnapshot.data_status`와 `MarketIndexSnapshot.data_status`에서는 스냅샷 값을 계산에 사용할 수 있음을 뜻함
 - `PARTIAL`: 일부 대상 또는 일부 필드만 사용할 수 있음
 - `STALE`: 값은 있으나 지연 또는 신선도 정책 확인이 필요함
 - `UNAVAILABLE`: 값이 없어 계산에 사용할 수 없음
@@ -65,7 +65,7 @@ provider 또는 내부 입력 경로가 값을 조회하거나 정규화할 때�
 
 - `PARTIAL`, `STALE`, `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED`를 단순 `UNAVAILABLE`로 접어 저장하면 안 된다.
 - 대시보드와 테스트가 사용자 조치가 필요한 인증/권한 문제와 일시적 provider 오류를 구분할 수 있어야 한다.
-- `PriceSnapshot.data_status`와 `MarketIndexSnapshot.data_status`는 스냅샷 값의 사용 가능 상태를 나타낸다. 조회 자체의 실패 원인과 대상별 상태 묶음은 `ProviderLookupResult`로 전달한다.
+- `ProviderLookupResult.lookup_status`는 조회 또는 정규화 요청의 결과를 나타내고, `PriceSnapshot.data_status`와 `MarketIndexSnapshot.data_status`는 스냅샷 값의 사용 가능 상태를 나타낸다. 따라서 조회가 성공해 `lookup_status=AVAILABLE`이어도 값이 없거나 사용할 수 없으면 snapshot의 `data_status=UNAVAILABLE`일 수 있다. 조회 자체의 실패 원인과 대상별 상태 묶음은 `ProviderLookupResult`로 전달한다.
 
 ## 데이터 모델
 
@@ -237,7 +237,7 @@ provider 조회 또는 내부 provider-normalization 단계의 상태 envelope�
 규칙:
 
 - 보유 목록, 가격, 지수 조회가 실패해 owner snapshot을 만들 수 없어도 `ProviderLookupResult`는 실패 원인을 보존해야 한다.
-- `lookup_status=AVAILABLE`은 provider 조회가 성공했음을 뜻한다. 이 값은 가격·지수 owner snapshot의 `data_status`를 대체하지 않으며, 성공한 조회의 snapshot도 `STALE` 또는 `UNAVAILABLE`일 수 있다.
+- `lookup_status=AVAILABLE`은 provider 조회 또는 정규화 요청이 성공했음을 뜻한다. 이 값은 가격·지수 owner snapshot의 `data_status`를 대체하지 않으며, 성공한 조회의 snapshot도 `STALE` 또는 `UNAVAILABLE`일 수 있다. 값의 계산 사용 가능 여부는 snapshot의 `data_status`가 소유한다.
 - 보유 조회의 `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED`, `PARTIAL`, `STALE`, `UNAVAILABLE` 상태는 `ProviderHoldingSnapshot`에 임의 필드를 추가하지 않고 반드시 `ProviderLookupResult.lookup_status`로 전달한다. `PortfolioPosition.calculation_status`는 계산 가능 여부만 나타내며 provider 실패 원인의 저장 위치가 아니다.
 - 보유 조회가 실패해 `ProviderHoldingSnapshot`을 만들 수 없더라도 `target_label`에는 연결 설정 또는 등록된 provider 계정에서 해석한 안전한 계좌 표시명을 보존한다. 원본 계좌 식별자와 `target_key`는 화면에 노출하지 않는다.
 - 가격/지수 조회의 인증 실패와 provider 오류는 `PriceSnapshot.data_status` 또는 `MarketIndexSnapshot.data_status`만으로 표현하지 않고 `ProviderLookupResult.lookup_status`에 보존한다. provider-only 가격 조회 결과는 같은 심볼이 다른 시장에서 충돌하지 않도록 시장으로 한정한 `target_key`를 사용하고, 가격·지수 조회 결과는 동일 `target_key`의 역할별 기준값을 구분하도록 `snapshot_role`을 반드시 함께 보존한다.
