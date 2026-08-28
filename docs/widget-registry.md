@@ -158,7 +158,7 @@ Dashboard Schema와 양쪽 validator에 후속 provider 메타데이터 계약�
 - `data_status`와 `lookup_status`를 하나의 상태로 접어 표시하지 않는다.
 - `STALE`, `PARTIAL`, `UNAVAILABLE`, `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED`는 정상 계산값과 같은 시각 위계로 표시하지 않는다.
 - 일부 행이나 지표만 사용할 수 없고 나머지를 안전하게 표시할 수 있으면 위젯 렌더링 상태를 `PARTIAL`로, 핵심 데이터를 모두 사용할 수 없으면 `UNAVAILABLE`로 표시한다.
-- `lookup_status`는 보유 조회에서 같은 `ProviderLookupResult`의 `lookup_type`과 `target_key`, 가격·지수 조회에서 여기에 `snapshot_role`까지 포함한 조합으로 해당 행이나 계산 입력에 연결한다.
+- `lookup_status`는 보유 조회에서 같은 `ProviderLookupResult`의 `provider`, `lookup_type`, `target_key`, 가격·지수 조회에서 여기에 `snapshot_role`까지 포함한 조합으로 해당 행이나 계산 입력에 연결한다. 같은 provider의 보유기간 지수 조회는 기준일 또는 `position_key`를 포함한 `target_key`로 다른 포지션의 기준 지수와 구분한다.
 - 가격 또는 지수 값의 기준 시각과 시스템의 마지막 갱신 시각을 서로 대체해서 표시하지 않는다.
 - 가격·지수 스냅샷의 `captured_at`과 `data_status`는 해당 `snapshot_role`의 UI 라벨과 같은 묶음으로 표시한다.
 - `ProviderHoldingSnapshot.captured_at`은 가격·지수 기준 시각과 구분하고 provider 기반 보유 수량과 평균 매수가 가까이에 표시한다.

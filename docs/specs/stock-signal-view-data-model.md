@@ -129,7 +129,7 @@ provider 또는 내부 입력 경로의 조회 상태와 owner snapshot 값의 �
 - `stock_id`: 종목 식별자. provider-only unmapped 가격이면 비울 수 있다.
 - `provider_symbol`: provider가 반환한 원본 종목 코드 또는 심볼
 - `provider_market`: provider가 반환한 원본 시장 구분
-- `price`: 가격
+- `price`: 가격. `data_status=UNAVAILABLE`이면 값이 없음을 명시하기 위해 생략하거나 `null`로 둘 수 있고, 그 외 상태에서는 양수 값이 필수다.
 - `provider`: 가격을 제공한 provider 또는 내부 입력 주체
 - `provider_source_id`: provider 내부의 시세 소스 또는 연동 식별자
 - `captured_at`: 가격 값의 기준 시각(value basis timestamp)
@@ -151,6 +151,7 @@ provider 또는 내부 입력 경로의 조회 상태와 owner snapshot 값의 �
 - provider 연동 가격은 값을 산출한 기준 시각(`captured_at`)과 시스템이 값을 가져온 시각(`refreshed_at`)을 구분해 저장한다.
 - `data_status`가 `STALE`인 가격은 화면에 지연 상태로 표시한다. 계산 서비스는 사용자나 정책이 허용한 지연 허용 범위 안에서만 이를 사용할 수 있으며, 허용 범위를 벗어나면 해당 지표를 `UNAVAILABLE` 또는 `미산출`로 처리한다.
 - 가격이 없거나 `data_status`가 `UNAVAILABLE`이면 평가금액, 평가손익, 종목 수익률은 `미산출` 상태가 될 수 있다.
+- `lookup_status=AVAILABLE`이면서 `data_status=UNAVAILABLE`이면 조회·정규화 요청은 성공했지만 사용할 가격값이 없었음을 뜻하며, 0 같은 대체 숫자를 저장해서는 안 된다.
 
 ### MarketIndexSnapshot
 
@@ -160,7 +161,7 @@ KOSPI/KOSDAQ 같은 시장 지수의 특정 시점 입력값이다.
 
 - `id`: 내부 식별자
 - `market`: 시장 구분 (`KOSPI`, `KOSDAQ`)
-- `index_value`: 지수 값
+- `index_value`: 지수 값. `data_status=UNAVAILABLE`이면 값이 없음을 명시하기 위해 생략하거나 `null`로 둘 수 있고, 그 외 상태에서는 양수 값이 필수다.
 - `provider`: 지수를 제공한 provider 또는 내부 입력 주체
 - `provider_source_id`: provider 내부의 지수 소스 또는 연동 식별자
 - `captured_at`: 지수 값의 기준 시각(value basis timestamp)
@@ -177,6 +178,7 @@ KOSPI/KOSDAQ 같은 시장 지수의 특정 시점 입력값이다.
 - 시장 수익률 계산은 `CURRENT` 지수와 기준 역할(`DAY_BASELINE` 또는 `HOLDING_PERIOD_BASELINE`) 지수를 명시적으로 구분해 사용한다.
 - `data_status`가 `STALE`인 지수는 화면에 지연 상태로 표시한다. 계산 서비스는 사용자나 정책이 허용한 지연 허용 범위 안에서만 이를 사용할 수 있으며, 허용 범위를 벗어나면 시장 수익률과 상대수익률을 `UNAVAILABLE` 또는 `미산출`로 처리한다.
 - 기준일 지수 또는 현재 지수가 없거나 `data_status`가 `UNAVAILABLE`이면 시장 수익률과 상대수익률은 `미산출` 상태로 표시한다.
+- `lookup_status=AVAILABLE`이면서 `data_status=UNAVAILABLE`이면 조회·정규화 요청은 성공했지만 사용할 지수값이 없었음을 뜻하며, 0 같은 대체 숫자를 저장해서는 안 된다.
 - provider 연동 지수는 값을 산출한 기준 시각(`captured_at`)과 시스템이 값을 가져온 시각(`refreshed_at`)을 구분해 저장한다.
 - MVP에서는 실시간 지수를 필수로 자동 조회하지 않는다.
 
@@ -224,7 +226,7 @@ provider 조회 또는 내부 provider-normalization 단계의 상태 envelope�
 - `provider`: provider명
 - `lookup_type`: 조회 유형 (`HOLDINGS`, `PRICE`, `MARKET_INDEX`)
 - `lookup_status`: 공통 조회 상태 (`AVAILABLE`, `PARTIAL`, `STALE`, `UNAVAILABLE`, `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED`)
-- `target_key`: 조회 대상 키. 보유 조회는 계좌 식별자, 가격 조회는 내부 `stock_id` 또는 시장으로 한정한 `(provider_market, provider_symbol)` 조합, 지수 조회는 시장 구분을 사용한다. provider-only 가격의 조합은 충돌하지 않는 내부 직렬화 또는 대상 네임스페이스로 보존한다.
+- `target_key`: 조회 대상 키. 보유 조회는 계좌 식별자, 가격 조회는 내부 `stock_id` 또는 시장으로 한정한 `(provider_market, provider_symbol)` 조합, 지수 조회의 `CURRENT`·`DAY_BASELINE` 역할은 시장 구분을 사용한다. `HOLDING_PERIOD_BASELINE` 지수 조회는 서로 다른 보유기간 기준을 구분하도록 시장과 기준일 또는 `position_key`를 함께 포함한다. provider-only 가격의 조합은 충돌하지 않는 내부 직렬화 또는 대상 네임스페이스로 보존한다.
 - `target_label`: 원본 대상 식별자를 노출하지 않고 조회 대상을 설명하는 안전한 표시명. 보유 조회에서는 snapshot이 없는 실패에도 계좌를 식별할 수 있도록 필수다.
 - `snapshot_role`: 가격 또는 지수 조회의 계산 역할 (`CURRENT`, `DAY_BASELINE`, `HOLDING_PERIOD_BASELINE`). `lookup_type`이 `PRICE` 또는 `MARKET_INDEX`이면 필수이고, `HOLDINGS`이면 포함하지 않는다.
 - `error_code`: provider 또는 시스템이 분류한 오류 코드
@@ -240,9 +242,9 @@ provider 조회 또는 내부 provider-normalization 단계의 상태 envelope�
 - `lookup_status=AVAILABLE`은 provider 조회 또는 정규화 요청이 성공했음을 뜻한다. 이 값은 가격·지수 owner snapshot의 `data_status`를 대체하지 않으며, 성공한 조회의 snapshot도 `STALE` 또는 `UNAVAILABLE`일 수 있다. 값의 계산 사용 가능 여부는 snapshot의 `data_status`가 소유한다.
 - 보유 조회의 `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED`, `PARTIAL`, `STALE`, `UNAVAILABLE` 상태는 `ProviderHoldingSnapshot`에 임의 필드를 추가하지 않고 반드시 `ProviderLookupResult.lookup_status`로 전달한다. `PortfolioPosition.calculation_status`는 계산 가능 여부만 나타내며 provider 실패 원인의 저장 위치가 아니다.
 - 보유 조회가 실패해 `ProviderHoldingSnapshot`을 만들 수 없더라도 `target_label`에는 연결 설정 또는 등록된 provider 계정에서 해석한 안전한 계좌 표시명을 보존한다. 원본 계좌 식별자와 `target_key`는 화면에 노출하지 않는다.
-- 가격/지수 조회의 인증 실패와 provider 오류는 `PriceSnapshot.data_status` 또는 `MarketIndexSnapshot.data_status`만으로 표현하지 않고 `ProviderLookupResult.lookup_status`에 보존한다. provider-only 가격 조회 결과는 같은 심볼이 다른 시장에서 충돌하지 않도록 시장으로 한정한 `target_key`를 사용하고, 가격·지수 조회 결과는 동일 `target_key`의 역할별 기준값을 구분하도록 `snapshot_role`을 반드시 함께 보존한다.
+- 가격/지수 조회의 인증 실패와 provider 오류는 `PriceSnapshot.data_status` 또는 `MarketIndexSnapshot.data_status`만으로 표현하지 않고 `ProviderLookupResult.lookup_status`에 보존한다. provider-only 가격 조회 결과는 같은 심볼이 다른 시장에서 충돌하지 않도록 시장으로 한정한 `target_key`를 사용하고, 가격·지수 조회 결과는 동일 `target_key`의 역할별 기준값을 구분하도록 `snapshot_role`을 반드시 함께 보존한다. `HOLDING_PERIOD_BASELINE` 시장 지수는 서로 다른 포지션이나 기준일의 상태가 섞이지 않도록 해당 기준일 또는 `position_key`까지 포함한 `target_key`를 사용한다.
 - snapshot이 생성된 경우에도 stale 또는 partial 상태가 있으면 snapshot의 `data_status`와 조회 envelope의 `lookup_status`를 함께 전달할 수 있다.
-- 조회 결과의 대상 식별자는 `HOLDINGS`에서는 `(provider, lookup_type, target_key)`, `PRICE`와 `MARKET_INDEX`에서는 `(provider, lookup_type, target_key, snapshot_role)`로 고유해야 한다.
+- 조회 결과의 대상 식별자는 `HOLDINGS`에서는 `(provider, lookup_type, target_key)`, `PRICE`와 `MARKET_INDEX`에서는 `(provider, lookup_type, target_key, snapshot_role)`로 고유해야 한다. `HOLDING_PERIOD_BASELINE` 시장 지수의 `target_key`에는 기준일 또는 `position_key`가 포함되어야 한다.
 
 ### AlertRule
 
