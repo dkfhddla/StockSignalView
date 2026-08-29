@@ -30,6 +30,8 @@ PR 12 기준에서 대시보드는 정적 화면 정의가 아니라 Dashboard S
 - 최근 메모
 - 알림 상태
 
+후속 provider 메타데이터 계약을 통과한 데이터가 연결된 경우 각 보유·가격·지수 계산 입력의 provider명, 데이터 출처, 마지막 갱신 시각은 표의 별도 메타데이터 영역 또는 확장 컬럼으로 표시한다. Provider 기반 보유 수량과 평균 매수가에는 해당 `ProviderHoldingSnapshot`의 provider명, `source`, `captured_at`, `refreshed_at`을 보유 현황 기준 시각으로 가까이 표시하고, 평균 매수가에는 `cost_basis_source` 라벨을 함께 표시한다. 현재가와 지수 값에는 해당 `PriceSnapshot` 또는 `MarketIndexSnapshot`의 provider명, `source`, `captured_at`, `refreshed_at`, `data_status`를 `snapshot_role`별 기준 시각 및 상태로 표시한다. 이 항목은 현재 MVP `position_table` 필수 컬럼 계약에 포함하지 않는다.
+
 ### 모바일 카드 정보
 
 - 종목명, 종목 코드, 시장 구분
@@ -38,6 +40,8 @@ PR 12 기준에서 대시보드는 정적 화면 정의가 아니라 Dashboard S
 - 보유 수량과 평균 매수가
 - 최근 메모 한 줄
 - 알림 상태
+
+후속 provider 메타데이터 계약을 통과한 데이터가 연결된 모바일 카드는 각 보유·가격·지수 계산 입력의 provider명, 데이터 출처, 보유 현황 기준 시각 또는 `snapshot_role`별 기준 시각, 마지막 갱신 시각, 상태를 보조 메타데이터로 표시한다. 평균 매수가에는 원가 근거도 함께 표시한다. 현재 MVP의 수동/모의 데이터에는 이 표시를 요구하지 않는다.
 
 ### 필터 동작
 
@@ -63,9 +67,13 @@ PR 12 기준에서 대시보드는 정적 화면 정의가 아니라 Dashboard S
 ### 행 상태
 
 - 정상: 현재가와 시장 지수 기준값이 모두 있어 계산 가능하다.
-- 데이터 부족: 현재가, 기준가, 시장 지수 중 하나 이상이 없다.
+- 데이터 부족: 현재가, 기준가, 시장 지수 중 하나 이상이 없거나 provider 상태 표시 계약상 사용할 수 없는 데이터다.
 - 알림: 목표 수익률, 손절 기준, 상대수익률 조건 중 하나 이상이 충족됐다.
 - 모의 데이터: 실제 외부 시세가 아니라 수동 입력 또는 샘플 데이터로 계산됐다.
+
+Provider 확장 데이터가 연결된 행은 관련 owner 데이터 묶음의 상태를 독립적으로 확인하고 표시한다. `data_status`는 계산에 쓰는 `PriceSnapshot`과 `MarketIndexSnapshot`에만 적용하고, 보유 현황은 해당 `ProviderLookupResult.lookup_status`로 조회 가능 여부를 판단한다. 조회 상태는 보유 조회에서 같은 결과의 `lookup_type`과 `target_key`, 가격·지수 조회에서 여기에 `snapshot_role`까지 포함한 조합으로 해당 행이나 계산 입력에 연결한다. 적용 가능한 가격·지수 `data_status`와 관련 조회의 `lookup_status`가 모두 `AVAILABLE`일 때만 provider 데이터를 정상으로 취급한다. 가격·지수 스냅샷의 기준 시각과 `data_status` 배지는 해당 `snapshot_role` 또는 이해 가능한 역할 라벨과 한 묶음으로 표시하며, 같은 상태가 여러 역할에서 발생해도 라벨 없는 중복 배지로 표시하지 않는다. 일부 행이나 지표만 사용할 수 없으면 `PARTIAL`, 핵심 데이터를 모두 사용할 수 없으면 `UNAVAILABLE`로 표시한다. 둘 이상의 비정상 상태가 동시에 발생하면 해당 상태를 모두 표시하며, 데이터 부족 상태가 조회 실패 원인을 숨겨서는 안 된다.
+
+상태별 표시 라벨과 배지 매핑은 `docs/ui/components.md`의 상태 배지 계약을 따른다.
 
 ### 대시보드 수용 기준
 

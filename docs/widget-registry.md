@@ -10,6 +10,7 @@ Widget Registry는 Dashboard Schema v1에서 사용할 수 있는 위젯 타입�
 - 위젯은 주문 실행, 자동매매, 외부 API 호출을 직접 수행하지 않는다.
 - 위젯은 전달받은 데이터와 옵션만 사용한다.
 - 데이터가 부족하면 임의 값을 만들지 않고 `미산출` 또는 `데이터 부족` 상태를 표시한다.
+- provider 데이터가 연결된 위젯은 각 보유·가격·지수 계산 입력이 보존한 provider명, 데이터 출처, 기준 시각, 마지막 갱신 시각, 데이터 상태와 조회 상태를 숨기지 않는다. 정규화 경계는 이 표시 계약을 충족하도록 각 owner의 `source`를 보존해야 한다.
 
 ## MVP 위젯
 
@@ -142,6 +143,32 @@ Widget Registry는 Dashboard Schema v1에서 사용할 수 있는 위젯 타입�
 - `UNAVAILABLE`: 핵심 데이터 부족.
 - `INVALID_SCHEMA`: 스키마 검증 실패.
 
+## 데이터 상태 표시
+
+Dashboard Schema와 양쪽 validator에 후속 provider 메타데이터 계약이 도입된 뒤 해당 데이터가 연결된 위젯은 스냅샷의 `data_status`와 `ProviderLookupResult.lookup_status`를 구분해 표시해야 한다. 현재 MVP의 수동/모의 데이터에는 provider 메타데이터 표시를 요구하지 않고 기존 위젯 상태 계약만 적용한다.
+
+앞 절의 공통 상태는 위젯 렌더링 상태이고, `lookup_status`는 provider 조회 상태다. 두 필드에 같은 `PARTIAL` 또는 `UNAVAILABLE` 이름이 있어도 서로 대체해서는 안 된다.
+
+현재 MVP 렌더러와 스키마 검증은 provider 메타데이터 컬럼을 아직 허용하지 않는다. Provider 확장 구현 시에는 위젯 옵션 또는 별도 메타데이터 표시 영역으로 다음 상태를 노출해야 한다.
+
+허용 상태 값과 의미는 `docs/specs/stock-signal-view-data-model.md`의 `PriceSnapshot.data_status`, `MarketIndexSnapshot.data_status`, `ProviderLookupResult.lookup_status`가 소유한다. Widget Registry는 위젯이 owner 상태를 노출해야 하는 조건을 소유하며 상태 자체를 재정의하지 않는다. 표시 라벨과 배지 매핑은 `docs/ui/components.md`를 따른다.
+
+표시 기준:
+
+- `data_status`와 `lookup_status`를 하나의 상태로 접어 표시하지 않는다.
+- `STALE`, `PARTIAL`, `UNAVAILABLE`, `UNAUTHORIZED`, `FORBIDDEN`, `PROVIDER_ERROR`, `UNSUPPORTED`는 정상 계산값과 같은 시각 위계로 표시하지 않는다.
+- 일부 행이나 지표만 사용할 수 없고 나머지를 안전하게 표시할 수 있으면 위젯 렌더링 상태를 `PARTIAL`로, 핵심 데이터를 모두 사용할 수 없으면 `UNAVAILABLE`로 표시한다.
+- `lookup_status`는 보유 조회에서 같은 `ProviderLookupResult`의 `provider`, `lookup_type`, `target_key`, 가격·지수 조회에서 여기에 `snapshot_role`까지 포함한 조합으로 해당 행이나 계산 입력에 연결한다. 같은 provider의 보유기간 지수 조회는 기준일 또는 `position_key`를 포함한 `target_key`로 다른 포지션의 기준 지수와 구분한다.
+- 가격 또는 지수 값의 기준 시각과 시스템의 마지막 갱신 시각을 서로 대체해서 표시하지 않는다.
+- 가격·지수 스냅샷의 `captured_at`과 `data_status`는 해당 `snapshot_role`의 UI 라벨과 같은 묶음으로 표시한다.
+- `ProviderHoldingSnapshot.captured_at`은 가격·지수 기준 시각과 구분하고 provider 기반 보유 수량과 평균 매수가 가까이에 표시한다.
+- `data_status`는 `PriceSnapshot`과 `MarketIndexSnapshot`에만 적용한다. 보유 현황은 해당 `ProviderLookupResult.lookup_status`로 조회 가능 여부를 판단한다.
+- Provider 기반 평균 매수가는 `cost_basis_source`를 함께 표시하고 라벨은 `docs/ui/components.md`를 따른다.
+- 마지막 성공 갱신 시각이 있으면 상태 근처에 함께 표시한다.
+- provider 오류 상태의 자격 증명 처리는 `docs/specs/read-only-market-data-provider.md`의 비노출 경계를 따른다.
+- AI Dashboard Planner는 provider 기반 산출물에 필요한 출처와 갱신 상태를 제공하거나 보완 응답을 반환한다. 구조 유효성은 `docs/dashboard-schema-v1.md`의 검증 규칙과 백엔드·프런트엔드 validator가 판정하며, 렌더러는 `INVALID_SCHEMA`가 반환되면 위젯을 렌더링하지 않는다.
+- AI 요약이나 위젯 제목은 유효한 데이터 출처와 갱신 상태를 가리면 안 된다.
+
 ## 추가 기준
 
 새 위젯을 추가하려면 다음 항목을 함께 정의한다.
@@ -150,5 +177,6 @@ Widget Registry는 Dashboard Schema v1에서 사용할 수 있는 위젯 타입�
 - 허용 데이터 타입.
 - 필수 옵션과 선택 옵션.
 - 데이터 부족 상태 처리.
+- provider 메타데이터와 데이터 상태 표시 여부.
 - PC/모바일 표시 방식.
 - 테스트 기대치.
